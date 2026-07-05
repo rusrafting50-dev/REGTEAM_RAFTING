@@ -1,0 +1,128 @@
+# routes/athletes.py — CRUD спортсменов
+from datetime import date, datetime
+
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+
+import references
+from models import Athlete, ChangeLog, db
+
+bp = Blueprint("athletes", __name__, url_prefix="/athletes")
+
+PER_PAGE = 20
+
+
+@bp.route("/")
+def athletes_list():
+    query = Athlete.query.filter_by(is_active=True)
+
+    discipline = request.args.get("discipline", "")
+    gender = request.args.get("gender", "")
+    rank = request.args.get("rank", "")
+    territory = request.args.get("territory", "")
+    category = request.args.get("category", "")
+
+    if discipline:
+        query = query.filter(Athlete.discipline.contains(discipline))
+    if gender:
+        query = query.filter(Athlete.gender == gender)
+    if rank:
+        query = query.filter(Athlete.rank == rank)
+    if territory:
+        query = query.filter(Athlete.territory == territory)
+    if category:
+        query = query.filter(Athlete.category == category)
+
+    page = request.args.get("page", 1, type=int)
+    pagination = query.order_by(Athlete.last_name).paginate(page=page, per_page=PER_PAGE, error_out=False)
+
+    return render_template(
+        "athletes/list.html",
+        athletes=pagination.items,
+        pagination=pagination,
+        filters={
+            "discipline": discipline,
+            "gender": gender,
+            "rank": rank,
+            "territory": territory,
+            "category": category,
+        },
+        references=references,
+    )
+
+
+@bp.route("/new", methods=["GET", "POST"])
+def athletes_new():
+    if request.method == "POST":
+        athlete = Athlete()
+        _fill_athlete_from_form(athlete, request.form)
+        db.session.add(athlete)
+        db.session.commit()
+        flash("Спортсмен добавлен", "success")
+        return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
+
+    return render_template("athletes/form.html", athlete=None, references=references)
+
+
+@bp.route("/<int:athlete_id>")
+def athletes_detail(athlete_id):
+    athlete = Athlete.query.get_or_404(athlete_id)
+    return render_template("athletes/detail.html", athlete=athlete)
+
+
+@bp.route("/<int:athlete_id>/edit", methods=["GET", "POST"])
+def athletes_edit(athlete_id):
+    athlete = Athlete.query.get_or_404(athlete_id)
+
+    if request.method == "POST":
+        _fill_athlete_from_form(athlete, request.form)
+        db.session.commit()
+        flash("Изменения сохранены", "success")
+        return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
+
+    return render_template("athletes/form.html", athlete=athlete, references=references)
+
+
+@bp.route("/<int:athlete_id>/deactivate", methods=["POST"])
+def athletes_deactivate(athlete_id):
+    athlete = Athlete.query.get_or_404(athlete_id)
+    athlete.is_active = False
+    db.session.add(
+        ChangeLog(athlete_id=athlete.id, change_type="исключён", change_date=date.today())
+    )
+    db.session.commit()
+    flash("Спортсмен исключён из списка", "success")
+    return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
+
+
+@bp.route("/<int:athlete_id>/activate", methods=["POST"])
+def athletes_activate(athlete_id):
+    athlete = Athlete.query.get_or_404(athlete_id)
+    athlete.is_active = True
+    db.session.add(
+        ChangeLog(athlete_id=athlete.id, change_type="включён", change_date=date.today())
+    )
+    db.session.commit()
+    flash("Спортсмен возвращён в список", "success")
+    return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
+
+
+def _fill_athlete_from_form(athlete, form):
+    athlete.last_name = form.get("last_name", "").strip()
+    athlete.first_name = form.get("first_name", "").strip()
+    athlete.middle_name = form.get("middle_name", "").strip() or None
+
+    birth_date = form.get("birth_date", "")
+    athlete.birth_date = datetime.strptime(birth_date, "%Y-%m-%d").date() if birth_date else None
+
+    athlete.gender = form.get("gender", "")
+    athlete.discipline = form.get("discipline", "")
+    athlete.category = form.get("category", "")
+    athlete.age_category = form.get("age_category", "")
+    athlete.rank = form.get("rank", "")
+    athlete.organization = form.get("organization", "").strip()
+    athlete.territory = form.get("territory", "")
+    athlete.trainer = form.get("trainer", "").strip()
+    athlete.result_regional = form.get("result_regional", "").strip()
+    athlete.result_national = form.get("result_national", "").strip()
+    athlete.result_international = form.get("result_international", "").strip()
+    athlete.national_team = form.get("national_team", "").strip()

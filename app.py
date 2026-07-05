@@ -1,9 +1,10 @@
 # app.py — точка входа, инициализация Flask и БД
 import os
 
-from flask import Flask, render_template
+from flask import Flask, redirect, url_for
 
 from models import db
+from routes.athletes import bp as athletes_bp
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -15,14 +16,14 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
+    app.register_blueprint(athletes_bp)
 
     with app.app_context():
         db.create_all()
 
-    # Редирект GET / → /athletes подключается вместе с routes/athletes.py на Этапе 2
     @app.route("/")
     def index():
-        return render_template("base.html")
+        return redirect(url_for("athletes.athletes_list"))
 
     return app
 
