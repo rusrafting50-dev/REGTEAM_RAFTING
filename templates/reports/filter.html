@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Отчёты — АтлетБаза{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4">Формирование отчёта</h1>
+
+<form method="post" action="{{ url_for('reports.reports_preview') }}">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">Дисциплина</label>
+            <select name="discipline" class="form-select" multiple size="6">
+                {% for d in references.DISCIPLINES %}
+                <option value="{{ d }}">{{ d }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Возрастная категория</label>
+            <select name="age_category" class="form-select" multiple size="6">
+                {% for a in references.AGE_CATEGORIES %}
+                <option value="{{ a }}">{{ a }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Разряд</label>
+            <select name="rank" class="form-select" multiple size="6">
+                {% for r in references.RANKS %}
+                <option value="{{ r }}">{{ r }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Территория</label>
+            <select name="territory" class="form-select" multiple size="6">
+                {% for t in references.TERRITORIES %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Пол</label>
+            <select name="gender" class="form-select">
+                <option value="">Все</option>
+                {% for g in references.GENDERS %}
+                <option value="{{ g }}">{{ g }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Категория участника</label>
+            <select name="category" class="form-select">
+                <option value="">Все</option>
+                {% for c in references.CATEGORIES %}
+                <option value="{{ c }}">{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-4">
+            <div class="form-check mt-4">
+                <input type="checkbox" name="only_national_team" class="form-check-input" id="onlyNationalTeam">
+                <label class="form-check-label" for="onlyNationalTeam">Только включённые в сборную РФ</label>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Дата документа</label>
+            <input type="date" name="doc_date" class="form-control" value="{{ today }}">
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Предпросмотр</button>
+    </div>
+</form>
+{% endblock %}

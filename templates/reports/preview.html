@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Предпросмотр отчёта — АтлетБаза{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Предпросмотр отчёта</h1>
+    <a href="{{ url_for('reports.reports_filter') }}" class="btn btn-outline-secondary">Изменить фильтры</a>
+</div>
+
+<p>Найдено спортсменов: <strong>{{ athletes|length }}</strong></p>
+
+<form method="post" action="{{ url_for('reports.reports_export') }}" class="mb-3">
+    {% for value in filters.discipline %}<input type="hidden" name="discipline" value="{{ value }}">{% endfor %}
+    {% for value in filters.age_category %}<input type="hidden" name="age_category" value="{{ value }}">{% endfor %}
+    {% for value in filters.rank %}<input type="hidden" name="rank" value="{{ value }}">{% endfor %}
+    {% for value in filters.territory %}<input type="hidden" name="territory" value="{{ value }}">{% endfor %}
+    <input type="hidden" name="gender" value="{{ filters.gender }}">
+    <input type="hidden" name="category" value="{{ filters.category }}">
+    <input type="hidden" name="only_national_team" value="{{ 'on' if filters.only_national_team else '' }}">
+    <input type="hidden" name="doc_date" value="{{ filters.doc_date }}">
+    <button type="submit" class="btn btn-primary">Выгрузить Excel</button>
+</form>
+
+<div class="table-responsive">
+<table class="table table-sm table-striped table-bordered align-middle">
+    <thead>
+        <tr>
+            <th>№</th>
+            <th>ФИО</th>
+            <th>Дата рождения</th>
+            <th>Пол</th>
+            <th>Дисциплина</th>
+            <th>Категория</th>
+            <th>Возрастная категория</th>
+            <th>Разряд</th>
+            <th>Организация</th>
+            <th>Территория</th>
+            <th>Тренер</th>
+            <th>МО</th>
+            <th>РФ</th>
+            <th>Межд.</th>
+            <th>Сборная РФ</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for athlete in athletes %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ athlete.full_name }}</td>
+            <td>{{ athlete.birth_date.strftime('%d.%m.%Y') if athlete.birth_date }}</td>
+            <td>{{ athlete.gender }}</td>
+            <td>{{ athlete.discipline }}</td>
+            <td>{{ athlete.category }}</td>
+            <td>{{ athlete.age_category }}</td>
+            <td>{{ athlete.rank }}</td>
+            <td>{{ athlete.organization }}</td>
+            <td>{{ athlete.territory }}</td>
+            <td>{{ athlete.trainer }}</td>
+            <td>{{ athlete.result_regional }}</td>
+            <td>{{ athlete.result_national }}</td>
+            <td>{{ athlete.result_international }}</td>
+            <td>{{ athlete.national_team }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="15" class="text-center text-muted">Ничего не найдено по заданным фильтрам</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

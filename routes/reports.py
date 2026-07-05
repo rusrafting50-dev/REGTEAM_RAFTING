@@ -2,8 +2,9 @@
 from datetime import datetime
 from io import BytesIO
 
-from flask import Blueprint, request, send_file
+from flask import Blueprint, render_template, request, send_file
 
+import references
 from excel_generator import generate_report
 from models import Athlete, ReportSettings
 
@@ -52,6 +53,35 @@ def get_doc_date(args):
     if doc_date_raw:
         return datetime.strptime(doc_date_raw, "%Y-%m-%d").date()
     return datetime.today().date()
+
+
+def get_selected_filters(args):
+    return {
+        "discipline": args.getlist("discipline"),
+        "age_category": args.getlist("age_category"),
+        "rank": args.getlist("rank"),
+        "territory": args.getlist("territory"),
+        "gender": args.get("gender", ""),
+        "category": args.get("category", ""),
+        "only_national_team": args.get("only_national_team") == "on",
+        "doc_date": args.get("doc_date", "") or datetime.today().date().isoformat(),
+    }
+
+
+@bp.route("")
+def reports_filter():
+    return render_template(
+        "reports/filter.html",
+        references=references,
+        today=datetime.today().date().isoformat(),
+    )
+
+
+@bp.route("/preview", methods=["POST"])
+def reports_preview():
+    athletes = get_filtered_athletes(request.form)
+    filters = get_selected_filters(request.form)
+    return render_template("reports/preview.html", athletes=athletes, filters=filters)
 
 
 @bp.route("/export", methods=["POST"])
