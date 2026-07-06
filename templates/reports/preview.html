@@ -32,7 +32,7 @@
             <th rowspan="2">Категория (спортсмен, тренер, специалист)</th>
             <th rowspan="2">Возрастная категория в соответствии с ЕВСК</th>
             <th rowspan="2">Спортивное звание, разряд</th>
-            <th rowspan="2">Физкультурно-спортивная организация</th>
+            <th rowspan="2" class="col-organization">Физкультурно-спортивная организация</th>
             <th rowspan="2">Территориальная принадлежность</th>
             <th rowspan="2">Личный тренер</th>
             <th colspan="3">Высший результат сезона на официальных спортивных соревнованиях</th>
@@ -55,7 +55,7 @@
             <td class="text-center">{{ athlete.category }}</td>
             <td class="text-center">{{ athlete.age_category }}</td>
             <td class="text-center">{{ athlete.rank }}</td>
-            <td class="text-center">{{ athlete.organization }}</td>
+            <td class="text-center col-organization">{{ athlete.organization }}</td>
             <td class="text-center">{{ athlete.territory }}</td>
             <td class="text-center text-nowrap">{{ athlete.trainer }}</td>
             <td class="text-center">{{ athlete.result_regional }}</td>

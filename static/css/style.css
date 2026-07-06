@@ -45,3 +45,11 @@
     white-space: normal;
     word-break: break-word;
 }
+
+/* Столбец организации: ширина под 'МБУ ДО СШ "Старт" ГОЩ', более длинные значения переносятся на новую строку внутри этой ширины */
+.col-organization {
+    width: 13em;
+    max-width: 13em;
+    white-space: normal;
+    word-break: break-word;
+}
