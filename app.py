@@ -13,6 +13,7 @@ from routes.reports import bp as reports_bp
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 CATEGORY_PATTERN = re.compile(r"\s*(\(\s*\d+\s*-\s*\d+\s*категория\s*\))", re.IGNORECASE)
+TRAINER_SEPARATOR = re.compile(r",\s*")
 
 
 def break_before_category(value):
@@ -20,6 +21,14 @@ def break_before_category(value):
     if not value:
         return value
     return Markup(CATEGORY_PATTERN.sub(r"<br>\1", str(escape(value))))
+
+
+def break_trainers(value):
+    """Каждого тренера (через запятую) — на отдельную строку, с запятой после инициалов."""
+    if not value:
+        return value
+    parts = TRAINER_SEPARATOR.split(str(escape(value)))
+    return Markup(",<br>".join(parts))
 
 
 def create_app():
@@ -30,6 +39,7 @@ def create_app():
 
     app.jinja_env.finalize = lambda value: "" if value is None else value
     app.jinja_env.filters["break_before_category"] = break_before_category
+    app.jinja_env.filters["break_trainers"] = break_trainers
 
     db.init_app(app)
     app.register_blueprint(athletes_bp)
