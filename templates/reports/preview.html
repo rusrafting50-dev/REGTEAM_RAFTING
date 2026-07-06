@@ -28,7 +28,7 @@
             <th rowspan="2">Фамилия, имя, отчество (при наличии)</th>
             <th rowspan="2">Дата рождения</th>
             <th rowspan="2">Пол</th>
-            <th rowspan="2">Спортивная дисциплина или группа дисциплин</th>
+            <th rowspan="2" class="col-discipline">Спортивная дисциплина или группа дисциплин</th>
             <th rowspan="2">Категория (спортсмен, тренер, специалист)</th>
             <th rowspan="2">Возрастная категория в соответствии с ЕВСК</th>
             <th rowspan="2">Спортивное звание, разряд</th>
@@ -51,7 +51,7 @@
             <td>{{ athlete.full_name }}</td>
             <td class="text-center">{{ athlete.birth_date.strftime('%d.%m.%Y') if athlete.birth_date }}</td>
             <td class="text-center">{{ athlete.gender }}</td>
-            <td class="text-center text-nowrap">{{ athlete.discipline }}</td>
+            <td class="text-center col-discipline-cell" title="{{ athlete.discipline }}">{{ athlete.discipline }}</td>
             <td class="text-center">{{ athlete.category }}</td>
             <td class="text-center">{{ athlete.age_category }}</td>
             <td class="text-center">{{ athlete.rank }}</td>
