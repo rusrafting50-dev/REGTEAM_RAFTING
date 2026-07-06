@@ -29,3 +29,11 @@
     font-weight: normal;
     vertical-align: middle;
 }
+
+/* Вертикальный текст снизу вверх для заголовков МО/РФ/Межд., выровнен по левому краю */
+.header-vertical {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    text-align: left;
+}
