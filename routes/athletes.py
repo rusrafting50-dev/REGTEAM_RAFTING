@@ -13,6 +13,9 @@ PER_PAGE = 20
 # Маршрут (Маршрут - лыжный, водный, горный и т.д. "N-N категория") — независимо от пробелов/дефиса
 ROUTE_DISCIPLINE_PATTERN = r"\(\s*\d+\s*-\s*\d+\s*категория\s*\)"
 
+# Дистанции / Дистанция / Группа дисциплин "дистанция" — без учёта регистра
+DISTANCE_DISCIPLINE_PATTERN = r"(?i)дистанц"
+
 
 def _apply_common_filters(query):
     discipline = request.args.get("discipline", "")
@@ -65,6 +68,14 @@ def athletes_list():
 def athletes_routes_list():
     query = Athlete.query.filter_by(is_active=True).filter(
         Athlete.discipline.op("REGEXP")(ROUTE_DISCIPLINE_PATTERN)
+    )
+    return _render_athletes_list(query)
+
+
+@bp.route("/distances")
+def athletes_distances_list():
+    query = Athlete.query.filter_by(is_active=True).filter(
+        Athlete.discipline.op("REGEXP")(DISTANCE_DISCIPLINE_PATTERN)
     )
     return _render_athletes_list(query)
 
