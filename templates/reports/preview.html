@@ -57,7 +57,7 @@
             <td class="text-center">{{ athlete.rank }}</td>
             <td class="text-center col-organization">{{ athlete.organization }}</td>
             <td class="text-center">{{ athlete.territory }}</td>
-            <td class="text-center text-nowrap">{{ athlete.trainer }}</td>
+            <td class="text-center text-nowrap">{{ athlete.trainer|break_trainers }}</td>
             <td class="text-center">{{ athlete.result_regional }}</td>
             <td class="text-center">{{ athlete.result_national }}</td>
             <td class="text-center">{{ athlete.result_international }}</td>
