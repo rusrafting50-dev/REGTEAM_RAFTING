@@ -1,1 +1,18 @@
-/* style.css — общие стили АтлетБазы */
+/* style.css — общие стили Сборной команды */
+
+/* Контейнер таблиц на экране шире на 5% относительно стандартных брейкпоинтов Bootstrap */
+@media (min-width: 576px) {
+    .container { max-width: 567px; }
+}
+@media (min-width: 768px) {
+    .container { max-width: 756px; }
+}
+@media (min-width: 992px) {
+    .container { max-width: 1008px; }
+}
+@media (min-width: 1200px) {
+    .container { max-width: 1197px; }
+}
+@media (min-width: 1400px) {
+    .container { max-width: 1386px; }
+}
