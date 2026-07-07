@@ -75,7 +75,7 @@ def _distinct_organizations():
 
 def _render_athletes_list(
     query, heading="Спортсмены", show_add_button=True, discipline_preset=None,
-    hide_discipline_filter=False, **extra_context,
+    hide_discipline_filter=False, link_fio_to_new=False, **extra_context,
 ):
     query, filters = _apply_common_filters(query)
     page = request.args.get("page", 1, type=int)
@@ -91,6 +91,7 @@ def _render_athletes_list(
         show_add_button=show_add_button,
         discipline_preset=discipline_preset,
         hide_discipline_filter=hide_discipline_filter,
+        link_fio_to_new=link_fio_to_new,
         **extra_context,
     )
 
@@ -98,7 +99,10 @@ def _render_athletes_list(
 @bp.route("/")
 def athletes_list():
     query = Athlete.query.filter_by(is_active=True)
-    return _render_athletes_list(query, heading="Список сборной команды")
+    return _render_athletes_list(
+        query, heading="Список сборной команды",
+        show_add_button=False, link_fio_to_new=True,
+    )
 
 
 @bp.route("/routes")
