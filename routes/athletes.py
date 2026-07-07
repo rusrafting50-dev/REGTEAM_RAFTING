@@ -34,8 +34,7 @@ DISTANCE_TYPES = [
     ("/distances/mountain", "Дистанции горные", "athletes.athletes_distances_mountain", r"(?is)дистанц.*горн", "Дистанции горные", "Дистанции горные", True),
     ("/distances/speleo", "Дистанции спелео", "athletes.athletes_distances_speleo", r"(?is)дистанц.*спелео", "Дистанции спелео", "Дистанции спелео", True),
     ("/distances/water", "Дистанции водные", "athletes.athletes_distances_water", r"(?is)дистанц.*водн", "Дистанции водные", "Дистанции водные", True),
-    ("/distances/vehicle-bike", "Дистанции на средствах передвижения (вело)", "athletes.athletes_distances_vehicle_bike", r"(?is)дистанц.*средствах передвижения.*вело", "Дистанции на средствах передвижения (вело)", "Дистанции на средствах передвижения (вело)", True),
-    ("/distances/vehicle-horse", "Дистанции на средствах передвижения (конные)", "athletes.athletes_distances_vehicle_horse", r"(?is)дистанц.*средствах передвижения.*конн", "Дистанции на средствах передвижения (конные)", "Дистанции на средствах передвижения (конные)", True),
+    ("/distances/vehicle", "Дистанции на средствах передвижения", "athletes.athletes_distances_vehicle", r"(?is)дистанц.*средствах передвижения", "Дистанции на средствах передвижения", "Дистанции на средствах передвижения", True),
 ]
 
 
