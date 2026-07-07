@@ -34,8 +34,7 @@ DISTANCE_TYPES = [
     ("/distances/mountain", "Дистанции горные", "athletes.athletes_distances_mountain", r"(?is)дистанц.*горн", "Дистанции горные", "Дистанции горные", True),
     ("/distances/speleo", "Дистанции спелео", "athletes.athletes_distances_speleo", r"(?is)дистанц.*спелео", "Дистанции спелео", "Дистанции спелео", True),
     ("/distances/water", "Дистанции водные", "athletes.athletes_distances_water", r"(?is)дистанц.*водн", "Дистанции водные", "Дистанции водные", True),
-    ("/distances/vehicle-bike", "Дистанции на средствах передвижения (вело)", "athletes.athletes_distances_vehicle_bike", r"(?is)дистанц.*средствах передвижения.*вело", "Дистанции на средствах передвижения (вело)", "Дистанции на средствах передвижения (вело)", True),
-    ("/distances/vehicle-horse", "Дистанции на средствах передвижения (конные)", "athletes.athletes_distances_vehicle_horse", r"(?is)дистанц.*средствах передвижения.*конн", "Дистанции на средствах передвижения (конные)", "Дистанции на средствах передвижения (конные)", True),
+    ("/distances/vehicle", "Дистанции на средствах передвижения", "athletes.athletes_distances_vehicle", r"(?is)дистанц.*средствах передвижения", "Дистанции на средствах передвижения", "Дистанции на средствах передвижения", True),
 ]
 
 
@@ -76,7 +75,7 @@ def _distinct_organizations():
 
 def _render_athletes_list(
     query, heading="Спортсмены", show_add_button=True, discipline_preset=None,
-    hide_discipline_filter=False, **extra_context,
+    hide_discipline_filter=False, link_fio_to_new=False, **extra_context,
 ):
     query, filters = _apply_common_filters(query)
     page = request.args.get("page", 1, type=int)
@@ -92,6 +91,7 @@ def _render_athletes_list(
         show_add_button=show_add_button,
         discipline_preset=discipline_preset,
         hide_discipline_filter=hide_discipline_filter,
+        link_fio_to_new=link_fio_to_new,
         **extra_context,
     )
 
@@ -99,7 +99,10 @@ def _render_athletes_list(
 @bp.route("/")
 def athletes_list():
     query = Athlete.query.filter_by(is_active=True)
-    return _render_athletes_list(query, heading="Список сборной команды")
+    return _render_athletes_list(
+        query, heading="Список сборной команды",
+        show_add_button=False, link_fio_to_new=True,
+    )
 
 
 @bp.route("/routes")
