@@ -86,7 +86,7 @@ def _render_athletes_list(query, heading="Спортсмены", show_add_button
 @bp.route("/")
 def athletes_list():
     query = Athlete.query.filter_by(is_active=True)
-    return _render_athletes_list(query)
+    return _render_athletes_list(query, heading="Список сборной команды")
 
 
 @bp.route("/routes")
