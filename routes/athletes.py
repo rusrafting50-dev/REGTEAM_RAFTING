@@ -62,7 +62,10 @@ TRAINER_DISCIPLINE_OPTIONS = [
 ]
 
 # Варианты категории для формы добавления тренера
-TRAINER_CATEGORY_OPTIONS = ["Главный тренер", "тренер"]
+TRAINER_CATEGORY_OPTIONS = ["Главный тренер", "Тренер", "Специалист"]
+
+# Категория для формы добавления спортсмена
+ATHLETE_CATEGORY_OPTIONS = ["Спортсмен"]
 
 # Варианты возрастной категории для формы добавления тренера
 TRAINER_AGE_CATEGORY_OPTIONS = [
@@ -243,7 +246,7 @@ def athletes_new():
         entity_label = "тренера"
     else:
         discipline_options = DISCIPLINE_OPTION_GROUPS.get(request.args.get("discipline_group", ""))
-        category_options = None
+        category_options = ATHLETE_CATEGORY_OPTIONS
         age_category_options = None
         entity_label = "спортсмена"
 
