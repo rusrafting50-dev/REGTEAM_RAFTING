@@ -14,6 +14,9 @@
             <button type="submit" class="btn btn-outline-success">Вернуть в список</button>
         </form>
         {% endif %}
+        <form method="post" action="{{ url_for('athletes.athletes_delete', athlete_id=athlete.id) }}" class="d-inline" onsubmit="return confirm('Удалить без возможности восстановления?');">
+            <button type="submit" class="btn btn-danger">Удалить</button>
+        </form>
     </div>
 </div>
 

@@ -321,6 +321,16 @@ def athletes_activate(athlete_id):
     return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
 
+@bp.route("/<int:athlete_id>/delete", methods=["POST"])
+def athletes_delete(athlete_id):
+    athlete = Athlete.query.get_or_404(athlete_id)
+    is_trainer = bool(athlete.category and re.search(TRAINER_CATEGORY_PATTERN, athlete.category))
+    db.session.delete(athlete)
+    db.session.commit()
+    flash("Тренер удалён" if is_trainer else "Спортсмен удалён", "success")
+    return redirect(url_for("athletes.athletes_trainers_list" if is_trainer else "athletes.athletes_list"))
+
+
 def _fill_athlete_from_form(athlete, form):
     athlete.last_name = form.get("last_name", "").strip()
     athlete.first_name = form.get("first_name", "").strip()
