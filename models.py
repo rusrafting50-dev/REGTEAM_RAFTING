@@ -39,7 +39,8 @@ class Athlete(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     change_logs = db.relationship(
-        "ChangeLog", backref="athlete", lazy=True, order_by="ChangeLog.change_date.desc()"
+        "ChangeLog", backref="athlete", lazy=True, order_by="ChangeLog.change_date.desc()",
+        cascade="all, delete-orphan",
     )
 
     @property
