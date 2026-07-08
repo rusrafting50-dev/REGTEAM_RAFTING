@@ -4,7 +4,7 @@ import re
 
 from flask import Flask, flash, redirect, render_template, request, url_for
 from markupsafe import Markup, escape
-from sqlalchemy import event
+from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import Engine
 
 from models import ReportSettings, db
@@ -41,6 +41,22 @@ def _register_sqlite_regexp(dbapi_connection, connection_record):
     )
 
 
+def _sync_missing_columns():
+    """Добавляет в уже существующую БД колонки, которых нет (db.create_all() таблицы не изменяет)."""
+    inspector = inspect(db.engine)
+    for table in db.metadata.tables.values():
+        if not inspector.has_table(table.name):
+            continue
+        existing = {col["name"] for col in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in existing:
+                continue
+            col_type = column.type.compile(db.engine.dialect)
+            with db.engine.connect() as conn:
+                conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'))
+                conn.commit()
+
+
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = "dev-secret-key"
@@ -58,6 +74,7 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        _sync_missing_columns()
 
     @app.route("/")
     def index():
