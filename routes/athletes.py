@@ -200,7 +200,7 @@ def athletes_list():
 
 @bp.route("/routes")
 def athletes_routes_list():
-    query = Athlete.query.filter_by(is_active=True).filter(
+    query = Athlete.query.filter(
         Athlete.discipline.op("REGEXP")(ROUTE_DISCIPLINE_PATTERN)
     )
     return _render_athletes_list(
@@ -211,7 +211,7 @@ def athletes_routes_list():
 
 @bp.route("/trainers")
 def athletes_trainers_list():
-    query = Athlete.query.filter_by(is_active=True).filter(
+    query = Athlete.query.filter(
         Athlete.category.op("REGEXP")(TRAINER_CATEGORY_PATTERN)
     )
     return _render_athletes_list(
@@ -223,7 +223,7 @@ def athletes_trainers_list():
 
 @bp.route("/distances")
 def athletes_distances_list():
-    query = Athlete.query.filter_by(is_active=True).filter(
+    query = Athlete.query.filter(
         Athlete.discipline.op("REGEXP")(DISTANCE_DISCIPLINE_PATTERN)
     )
     return _render_athletes_list(
@@ -234,7 +234,7 @@ def athletes_distances_list():
 
 def _make_discipline_type_view(pattern, heading, discipline_preset, hide_discipline_filter, discipline_group):
     def view():
-        query = Athlete.query.filter_by(is_active=True).filter(
+        query = Athlete.query.filter(
             Athlete.discipline.op("REGEXP")(pattern)
         )
         kwargs = {"hide_discipline_filter": hide_discipline_filter}
