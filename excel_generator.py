@@ -44,6 +44,7 @@ BOLD_12 = Font(name=FONT_NAME, size=12, bold=True)
 PLAIN_12 = Font(name=FONT_NAME, size=12)
 CAPTION_10 = Font(name=FONT_NAME, size=10)
 DATA_FONT = Font(name=FONT_NAME, size=10)
+DATA_FONT_12 = Font(name=FONT_NAME, size=12)
 
 CENTER = Alignment(horizontal="center")
 CENTER_WRAP = Alignment(horizontal="center", vertical="center", wrap_text=True)
@@ -51,6 +52,7 @@ CENTER_TOP_WRAP = Alignment(horizontal="center", vertical="top", wrap_text=True)
 LEFT_WRAP = Alignment(horizontal="left", vertical="center", wrap_text=True)
 RIGHT = Alignment(horizontal="right")
 LEFT = Alignment(horizontal="left")
+VERTICAL_TEXT = Alignment(horizontal="left", vertical="center", wrap_text=True, textRotation=90)
 
 
 def _set_column_widths(ws):
@@ -91,30 +93,30 @@ def _count_by_category(athletes):
     return trainers, specialists, sportsmen
 
 
-def _write_athletes_header(ws, header_row):
+def _write_athletes_header(ws, header_row, header_font=BOLD_12):
     """Заголовок таблицы (2 строки) + строка нумерации столбцов. Возвращает первую строку данных."""
     for col in range(1, 12):
         letter = get_column_letter(col)
         _merge_value(
             ws, f"{letter}{header_row}:{letter}{header_row + 1}",
-            COLUMN_HEADERS[col - 1], BOLD_12, CENTER_WRAP,
+            COLUMN_HEADERS[col - 1], header_font, CENTER_WRAP,
         )
 
     _merge_value(
         ws, f"L{header_row}:N{header_row}",
         "Высший результат сезона на официальных спортивных соревнованиях",
-        BOLD_12, CENTER_WRAP,
+        header_font, CENTER_WRAP,
     )
     for letter, text in (("L", "Московские областные"), ("M", "Всероссийские"), ("N", "Международные")):
         cell = ws[f"{letter}{header_row + 1}"]
         cell.value = text
-        cell.font = BOLD_12
-        cell.alignment = CENTER_WRAP
+        cell.font = header_font
+        cell.alignment = VERTICAL_TEXT
 
     _merge_value(
         ws, f"O{header_row}:O{header_row + 1}",
         "Состав спортивной сборной команды Российской Федерации",
-        BOLD_12, CENTER_WRAP,
+        header_font, CENTER_WRAP,
     )
 
     numbers_row = header_row + 2
@@ -134,7 +136,7 @@ def _write_athletes_header(ws, header_row):
     return numbers_row + 1
 
 
-def _write_athlete_row(ws, row, index, athlete):
+def _write_athlete_row(ws, row, index, athlete, font=DATA_FONT):
     values = [
         index, athlete.full_name, athlete.birth_date, athlete.gender,
         athlete.discipline, athlete.category, athlete.age_category, athlete.rank,
@@ -144,7 +146,7 @@ def _write_athlete_row(ws, row, index, athlete):
     ]
     for col, value in enumerate(values, start=1):
         cell = ws.cell(row=row, column=col, value=value)
-        cell.font = DATA_FONT
+        cell.font = font
         cell.border = BORDER_ALL
         cell.alignment = LEFT_WRAP if col == 2 else CENTER_WRAP
         if col == 3 and value:
@@ -220,9 +222,9 @@ def generate_report(athletes, settings, doc_date):
 
     _write_counters(ws, "L9:M9", "спортсмены:", "N9", sportsmen)
 
-    first_data_row = _write_athletes_header(ws, 11)
+    first_data_row = _write_athletes_header(ws, 11, header_font=PLAIN_12)
     for i, athlete in enumerate(athletes, start=1):
-        _write_athlete_row(ws, first_data_row + i - 1, i, athlete)
+        _write_athlete_row(ws, first_data_row + i - 1, i, athlete, font=DATA_FONT_12)
 
     return wb
 
@@ -274,14 +276,14 @@ def generate_changes_report(exclude_list, include_list, settings, doc_date, doc_
     _merge_value(ws, "G6:I6", "(наименование вида спорта)", CAPTION_10, CENTER_TOP_WRAP)
     _set_border_range(ws, "G6:I6", BORDER_TOP)
 
-    row = _write_athletes_header(ws, 9)
+    row = _write_athletes_header(ws, 9, header_font=PLAIN_12)
 
     _merge_value(ws, f"A{row}:O{row}", "Исключить", BOLD_12, CENTER)
     for cell in ws[row]:
         cell.border = BORDER_ALL
     row += 1
     for i, athlete in enumerate(exclude_list, start=1):
-        _write_athlete_row(ws, row, i, athlete)
+        _write_athlete_row(ws, row, i, athlete, font=DATA_FONT_12)
         row += 1
 
     include_marker_row = row
@@ -290,7 +292,7 @@ def generate_changes_report(exclude_list, include_list, settings, doc_date, doc_
         cell.border = BORDER_ALL
     row += 1
     for i, athlete in enumerate(include_list, start=1):
-        _write_athlete_row(ws, row, i, athlete)
+        _write_athlete_row(ws, row, i, athlete, font=DATA_FONT_12)
         row += 1
 
     return wb
