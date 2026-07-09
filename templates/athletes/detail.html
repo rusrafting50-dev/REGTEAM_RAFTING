@@ -52,14 +52,38 @@
                     <th>Статус</th>
                     <th>Дата</th>
                     <th>Документ</th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody>
                 {% for log in athlete.change_logs %}
-                <tr>
+                <tr id="log-view-{{ log.id }}">
                     <td>{{ "Включён" if log.change_type == "включён" else "Исключён" }}</td>
                     <td>{{ log.change_date.strftime('%d.%m.%Y') if log.change_date }}</td>
                     <td>{{ "Изменение в список №" ~ log.document_number if log.document_number else "Основной список" }}</td>
+                    <td class="text-nowrap">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('log-view-{{ log.id }}').classList.add('d-none'); document.getElementById('log-edit-{{ log.id }}').classList.remove('d-none');">Изменить</button>
+                        <form method="post" action="{{ url_for('athletes.change_log_delete', log_id=log.id) }}" class="d-inline" onsubmit="return confirm('Удалить эту запись о членстве в сборной команде?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr id="log-edit-{{ log.id }}" class="d-none">
+                    <td>{{ "Включён" if log.change_type == "включён" else "Исключён" }}</td>
+                    <td colspan="3">
+                        <form method="post" action="{{ url_for('athletes.change_log_edit', log_id=log.id) }}" class="d-flex flex-wrap align-items-end gap-2">
+                            <div>
+                                <label class="form-label mb-0">Дата</label>
+                                <input type="date" name="change_date" class="form-control form-control-sm" value="{{ log.change_date.isoformat() if log.change_date else '' }}">
+                            </div>
+                            <div>
+                                <label class="form-label mb-0">Документ (номер изменения, пусто — основной список)</label>
+                                <input type="text" name="document_number" class="form-control form-control-sm" value="{{ log.document_number or '' }}">
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-primary">Сохранить изменения</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('log-edit-{{ log.id }}').classList.add('d-none'); document.getElementById('log-view-{{ log.id }}').classList.remove('d-none');">Отмена</button>
+                        </form>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
