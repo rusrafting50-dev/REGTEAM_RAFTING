@@ -361,6 +361,32 @@ def athletes_delete(athlete_id):
     return redirect(url_for("athletes.athletes_trainers_list" if is_trainer else "athletes.athletes_list"))
 
 
+@bp.route("/change-logs/<int:log_id>/edit", methods=["POST"])
+def change_log_edit(log_id):
+    log = ChangeLog.query.get_or_404(log_id)
+    date_raw = request.form.get("change_date", "").strip()
+    if date_raw:
+        try:
+            log.change_date = datetime.strptime(date_raw, "%Y-%m-%d").date()
+        except ValueError:
+            flash("Некорректная дата", "error")
+            return redirect(url_for("athletes.athletes_detail", athlete_id=log.athlete_id))
+    log.document_number = request.form.get("document_number", "").strip() or None
+    db.session.commit()
+    flash("Запись о членстве в сборной команде обновлена", "success")
+    return redirect(url_for("athletes.athletes_detail", athlete_id=log.athlete_id))
+
+
+@bp.route("/change-logs/<int:log_id>/delete", methods=["POST"])
+def change_log_delete(log_id):
+    log = ChangeLog.query.get_or_404(log_id)
+    athlete_id = log.athlete_id
+    db.session.delete(log)
+    db.session.commit()
+    flash("Запись о членстве в сборной команде удалена", "success")
+    return redirect(url_for("athletes.athletes_detail", athlete_id=athlete_id))
+
+
 def _fill_athlete_from_form(athlete, form):
     athlete.last_name = form.get("last_name", "").strip()
     athlete.first_name = form.get("first_name", "").strip()
