@@ -191,6 +191,7 @@ def generate_report(athletes, settings, doc_date):
     ws.row_dimensions[4].height = 12.0
     ws.row_dimensions[5].height = 38.25
     ws.row_dimensions[6].height = 33.0
+    ws.row_dimensions[10].height = 15.75
 
     _merge_value(ws, "B2:G2", "СФОРМИРОВАН", BOLD_12, CENTER)
 
