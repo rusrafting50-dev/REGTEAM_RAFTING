@@ -128,8 +128,11 @@ def _render_athletes_list(
 @bp.route("/")
 def athletes_list():
     query = Athlete.query.filter_by(is_active=True)
+    list_buttons = TEAM_AGE_CATEGORY_TYPES + [
+        ("", "Тренеры", "athletes.athletes_trainers_list", [], "Тренеры"),
+    ]
     return _render_athletes_list(
-        query, list_buttons=TEAM_AGE_CATEGORY_TYPES,
+        query, list_buttons=list_buttons,
         heading="Список сборной команды",
         show_add_button=False, highlight_active=False,
     )
