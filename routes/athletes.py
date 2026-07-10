@@ -28,9 +28,9 @@ DISCIPLINE_OPTION_GROUPS = {
 }
 
 # Кнопки на странице /athletes/routes ("Дисциплины"):
-# (путь, подпись кнопки, эндпоинт, паттерн дисциплины, заголовок страницы, дисциплина для предзаполнения при добавлении, скрыть фильтр "Дисциплина", группа вариантов дисциплины)
+# (путь, подпись кнопки, эндпоинт, паттерн дисциплины, заголовок страницы, дисциплина для предзаполнения при добавлении, группа вариантов дисциплины)
 ROUTE_TYPES = [
-    ("/routes/all", "Все дисциплины", "athletes.athletes_routes_all", r".*", "Все дисциплины", None, False, None),
+    ("/routes/all", "Все дисциплины", "athletes.athletes_routes_all", r".*", "Все дисциплины", None, None),
 ]
 
 # Тренер / Главный тренер / тренер — без учёта регистра
@@ -76,13 +76,10 @@ TRAINER_AGE_CATEGORY_OPTIONS = [
 
 
 def _apply_common_filters(query):
-    discipline = request.args.get("discipline", "")
     age_category = request.args.get("age_category", "")
     territory = request.args.get("territory", "")
     organization = request.args.get("organization", "")
 
-    if discipline:
-        query = query.filter(Athlete.discipline.contains(discipline))
     if age_category:
         query = query.filter(Athlete.age_category == age_category)
     if territory:
@@ -91,7 +88,6 @@ def _apply_common_filters(query):
         query = query.filter(Athlete.organization == organization)
 
     filters = {
-        "discipline": discipline,
         "age_category": age_category,
         "territory": territory,
         "organization": organization,
@@ -144,7 +140,7 @@ def _distinct_organizations():
 
 def _render_athletes_list(
     query, heading="Спортсмены", show_add_button=True, discipline_preset=None,
-    hide_discipline_filter=False, link_fio_to_new=False, link_fio_to_edit=False, discipline_group=None,
+    link_fio_to_new=False, link_fio_to_edit=False, discipline_group=None,
     add_button_label="Добавить спортсмена", add_form_variant=None, age_category_filter_options=None,
     highlight_active=True, **extra_context,
 ):
@@ -161,7 +157,6 @@ def _render_athletes_list(
         heading=heading,
         show_add_button=show_add_button,
         discipline_preset=discipline_preset,
-        hide_discipline_filter=hide_discipline_filter,
         link_fio_to_new=link_fio_to_new,
         link_fio_to_edit=link_fio_to_edit,
         age_category_filter_options=age_category_filter_options or references.AGE_CATEGORIES,
@@ -205,12 +200,12 @@ def athletes_trainers_list():
     )
 
 
-def _make_discipline_type_view(pattern, heading, discipline_preset, hide_discipline_filter, discipline_group):
+def _make_discipline_type_view(pattern, heading, discipline_preset, discipline_group):
     def view():
         query = Athlete.query.filter(
             Athlete.discipline.op("REGEXP")(pattern)
         )
-        kwargs = {"hide_discipline_filter": hide_discipline_filter}
+        kwargs = {}
         if heading:
             kwargs["heading"] = heading
         if discipline_preset:
@@ -221,11 +216,11 @@ def _make_discipline_type_view(pattern, heading, discipline_preset, hide_discipl
     return view
 
 
-for _path, _label, _endpoint, _pattern, _heading, _discipline_preset, _hide_discipline_filter, _discipline_group in ROUTE_TYPES:
+for _path, _label, _endpoint, _pattern, _heading, _discipline_preset, _discipline_group in ROUTE_TYPES:
     bp.add_url_rule(
         _path,
         endpoint=_endpoint.split(".")[1],
-        view_func=_make_discipline_type_view(_pattern, _heading, _discipline_preset, _hide_discipline_filter, _discipline_group),
+        view_func=_make_discipline_type_view(_pattern, _heading, _discipline_preset, _discipline_group),
     )
 
 
