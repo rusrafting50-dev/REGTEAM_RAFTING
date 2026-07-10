@@ -58,17 +58,40 @@
         <tr>
             <th>№ изменения в список</th>
             <th>Дата</th>
+            <th>Действия</th>
         </tr>
     </thead>
     <tbody>
         {% for change in list_changes %}
-        <tr>
+        <tr id="list-change-view-{{ change.id }}">
             <td>{{ change.number }}</td>
             <td>{{ change.date.strftime('%d.%m.%Y') if change.date }}</td>
+            <td class="text-nowrap">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('list-change-view-{{ change.id }}').classList.add('d-none'); document.getElementById('list-change-edit-{{ change.id }}').classList.remove('d-none');">Изменить</button>
+                <form method="post" action="{{ url_for('settings_list_changes_delete', record_id=change.id) }}" class="d-inline" onsubmit="return confirm('Удалить это изменение в список?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        <tr id="list-change-edit-{{ change.id }}" class="d-none">
+            <td colspan="3">
+                <form method="post" action="{{ url_for('settings_list_changes_edit', record_id=change.id) }}" class="d-flex flex-wrap align-items-end gap-2">
+                    <div>
+                        <label class="form-label mb-0">№ изменения в список</label>
+                        <input type="text" name="number" class="form-control form-control-sm" value="{{ change.number }}" required>
+                    </div>
+                    <div>
+                        <label class="form-label mb-0">Дата</label>
+                        <input type="date" name="date" class="form-control form-control-sm" value="{{ change.date.isoformat() if change.date else '' }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary">Сохранить изменения</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('list-change-edit-{{ change.id }}').classList.add('d-none'); document.getElementById('list-change-view-{{ change.id }}').classList.remove('d-none');">Отмена</button>
+                </form>
+            </td>
         </tr>
         {% else %}
         <tr>
-            <td colspan="2" class="text-center text-muted">Изменений пока нет</td>
+            <td colspan="3" class="text-center text-muted">Изменений пока нет</td>
         </tr>
         {% endfor %}
     </tbody>

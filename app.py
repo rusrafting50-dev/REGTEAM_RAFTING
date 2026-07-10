@@ -131,6 +131,33 @@ def create_app():
         flash("Изменение в список добавлено", "success")
         return redirect(url_for("settings"))
 
+    @app.route("/settings/list-changes/<int:record_id>/edit", methods=["POST"])
+    def settings_list_changes_edit(record_id):
+        record = ListChangeRecord.query.get_or_404(record_id)
+        number = request.form.get("number", "").strip()
+        date_raw = request.form.get("date", "").strip()
+        if not number or not date_raw:
+            flash("Укажите номер и дату изменения", "error")
+            return redirect(url_for("settings"))
+        try:
+            change_date = datetime.strptime(date_raw, "%Y-%m-%d").date()
+        except ValueError:
+            flash("Некорректная дата", "error")
+            return redirect(url_for("settings"))
+        record.number = number
+        record.date = change_date
+        db.session.commit()
+        flash("Изменение в список обновлено", "success")
+        return redirect(url_for("settings"))
+
+    @app.route("/settings/list-changes/<int:record_id>/delete", methods=["POST"])
+    def settings_list_changes_delete(record_id):
+        record = ListChangeRecord.query.get_or_404(record_id)
+        db.session.delete(record)
+        db.session.commit()
+        flash("Изменение в список удалено", "success")
+        return redirect(url_for("settings"))
+
     return app
 
 
