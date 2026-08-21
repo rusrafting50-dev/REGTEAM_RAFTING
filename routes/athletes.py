@@ -6,8 +6,19 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 import references
 from models import Athlete, ChangeLog, db
+from sync_to_rafting_cfo import отправить_спортсмена, удалить_спортсмена
 
 bp = Blueprint("athletes", __name__, url_prefix="/athletes")
+
+
+def _синхронизировать(athlete):
+    """Отправляет спортсмена/тренера на RAFTING_CFO после сохранения в
+    локальной базе. Не бросает исключение и не откатывает сохранение —
+    локальная база остаётся источником истины независимо от доступности
+    сайта; при ошибке только предупреждаем flash-сообщением."""
+    success, message = отправить_спортсмена(athlete)
+    if not success:
+        flash(f"Не удалось синхронизировать с сайтом: {message}", "warning")
 
 PER_PAGE = 20
 
@@ -167,6 +178,7 @@ def athletes_new():
         _fill_athlete_from_form(athlete, request.form)
         db.session.add(athlete)
         db.session.commit()
+        _синхронизировать(athlete)
         flash("Спортсмен добавлен", "success")
         return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
@@ -205,6 +217,7 @@ def athletes_edit(athlete_id):
     if request.method == "POST":
         _fill_athlete_from_form(athlete, request.form)
         db.session.commit()
+        _синхронизировать(athlete)
         flash("Изменения сохранены", "success")
         return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
@@ -237,6 +250,7 @@ def athletes_deactivate(athlete_id):
         ChangeLog(athlete_id=athlete.id, change_type="исключён", change_date=date.today())
     )
     db.session.commit()
+    _синхронизировать(athlete)
     flash("Спортсмен исключён из списка", "success")
     return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
@@ -250,6 +264,7 @@ def athletes_activate(athlete_id):
         ChangeLog(athlete_id=athlete.id, change_type="включён", change_date=date.today())
     )
     db.session.commit()
+    _синхронизировать(athlete)
     flash("Спортсмен добавлен в список" if is_first_add else "Спортсмен возвращён в список", "success")
     return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
@@ -260,6 +275,9 @@ def athletes_delete(athlete_id):
     is_trainer = bool(athlete.category and re.search(TRAINER_CATEGORY_PATTERN, athlete.category))
     db.session.delete(athlete)
     db.session.commit()
+    success, message = удалить_спортсмена(athlete_id)
+    if not success:
+        flash(f"Не удалось синхронизировать удаление с сайтом: {message}", "warning")
     flash("Тренер удалён" if is_trainer else "Спортсмен удалён", "success")
     return redirect(url_for("athletes.athletes_trainers_list" if is_trainer else "athletes.athletes_list"))
 

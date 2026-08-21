@@ -3,6 +3,7 @@ import os
 import re
 from datetime import date, datetime
 
+from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, url_for
 from markupsafe import Markup, escape
 from sqlalchemy import event, inspect, text
@@ -12,6 +13,8 @@ from models import ListChangeRecord, ReportSettings, db
 from routes.athletes import bp as athletes_bp
 from routes.import_export import bp as import_export_bp
 from routes.reports import bp as reports_bp
+
+load_dotenv()
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
