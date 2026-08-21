@@ -12,12 +12,14 @@ bp = Blueprint("athletes", __name__, url_prefix="/athletes")
 
 
 def _синхронизировать(athlete):
-    """Отправляет спортсмена/тренера на RAFTING_CFO после сохранения в
-    локальной базе. Не бросает исключение и не откатывает сохранение —
-    локальная база остаётся источником истины независимо от доступности
-    сайта; при ошибке только предупреждаем flash-сообщением."""
+    """Отправляет спортсмена/тренера на RAFTING_CFO — только по нажатию
+    кнопки «Отправить на сайт» (athletes_send_to_site), не автоматически
+    при сохранении/включении/исключении. Не бросает исключение — при
+    ошибке только предупреждаем flash-сообщением."""
     success, message = отправить_спортсмена(athlete)
-    if not success:
+    if success:
+        flash("Отправлено на сайт.", "success")
+    else:
         flash(f"Не удалось синхронизировать с сайтом: {message}", "warning")
 
 PER_PAGE = 20
@@ -178,7 +180,6 @@ def athletes_new():
         _fill_athlete_from_form(athlete, request.form)
         db.session.add(athlete)
         db.session.commit()
-        _синхронизировать(athlete)
         flash("Спортсмен добавлен", "success")
         return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
@@ -217,7 +218,6 @@ def athletes_edit(athlete_id):
     if request.method == "POST":
         _fill_athlete_from_form(athlete, request.form)
         db.session.commit()
-        _синхронизировать(athlete)
         flash("Изменения сохранены", "success")
         return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
@@ -250,7 +250,6 @@ def athletes_deactivate(athlete_id):
         ChangeLog(athlete_id=athlete.id, change_type="исключён", change_date=date.today())
     )
     db.session.commit()
-    _синхронизировать(athlete)
     flash("Спортсмен исключён из списка", "success")
     return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
@@ -264,8 +263,14 @@ def athletes_activate(athlete_id):
         ChangeLog(athlete_id=athlete.id, change_type="включён", change_date=date.today())
     )
     db.session.commit()
-    _синхронизировать(athlete)
     flash("Спортсмен добавлен в список" if is_first_add else "Спортсмен возвращён в список", "success")
+    return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
+
+
+@bp.route("/<int:athlete_id>/send-to-site", methods=["POST"])
+def athletes_send_to_site(athlete_id):
+    athlete = Athlete.query.get_or_404(athlete_id)
+    _синхронизировать(athlete)
     return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
 
