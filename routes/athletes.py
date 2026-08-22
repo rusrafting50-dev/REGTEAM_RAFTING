@@ -6,7 +6,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 import references
 from models import Athlete, ChangeLog, db
-from sync_to_rafting_cfo import отправить_спортсмена, удалить_спортсмена
+from sync_to_rafting_cfo import отправить_всех, отправить_спортсмена, удалить_спортсмена
 
 bp = Blueprint("athletes", __name__, url_prefix="/athletes")
 
@@ -272,6 +272,19 @@ def athletes_send_to_site(athlete_id):
     athlete = Athlete.query.get_or_404(athlete_id)
     _синхронизировать(athlete)
     return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
+
+
+@bp.route("/send-all-to-site", methods=["POST"])
+def athletes_send_all_to_site():
+    """Отправляет на RAFTING_CFO всех спортсменов и тренеров разом (и
+    включённых, и исключённых из состава) — см. отправить_всех."""
+    athletes = Athlete.query.all()
+    success, message = отправить_всех(athletes)
+    if success:
+        flash(f"Отправлено на сайт: {len(athletes)}.", "success")
+    else:
+        flash(f"Не удалось синхронизировать с сайтом: {message}", "warning")
+    return redirect(request.referrer or url_for("athletes.athletes_list"))
 
 
 @bp.route("/<int:athlete_id>/delete", methods=["POST"])
