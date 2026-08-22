@@ -14,7 +14,10 @@ from routes.athletes import bp as athletes_bp
 from routes.import_export import bp as import_export_bp
 from routes.reports import bp as reports_bp
 
-load_dotenv()
+# override=True — .env должен побеждать даже если такая переменная уже
+# случайно задана на уровне Windows (иначе пустое/старое системное
+# значение молча маскирует правильное значение из .env).
+load_dotenv(override=True)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
