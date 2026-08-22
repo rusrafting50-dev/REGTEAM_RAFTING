@@ -282,12 +282,43 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Приложение открывается на `http://localhost:5000`
+Приложение открывается на `http://localhost:5000` (порт по умолчанию,
+если не переопределён в `app.run(...)`, — см. фактический порт в
+`1_Запуск.bat` ниже, если он менялся).
 
 ### 1_Запуск.bat
+
+Останавливает уже запущенный Flask, подтягивает обновления из git
+(`--ff-only` — если чисто подтянуть нельзя, код остаётся как был, без
+слияний и без конфликтных меток в файлах), ставит зависимости и
+запускает сервер заново. Если `git pull` не выполнился (нет сети,
+прокси, локальные изменения не дают подтянуться) — выводит явное
+предупреждение и ждёт нажатия клавиши, вместо того чтобы молча
+запустить старую версию.
+
 ```bat
 @echo off
-call venv\Scripts\activate
+chcp 65001 >nul
+cd /d "%~dp0"
+
+echo [1/4] Stop Flask...
+taskkill /f /im python.exe 1>nul 2>nul
+timeout /t 2 /nobreak >nul
+
+echo [2/4] Git pull...
+git pull --ff-only origin main
+if errorlevel 1 (
+    echo.
+    echo ВНИМАНИЕ: обновление НЕ применилось - запускается ПРЕЖНЯЯ версия кода.
+    echo.
+    pause
+)
+
+echo [3/4] pip install...
+pip install -r requirements.txt --quiet
+
+echo [4/4] Start Flask...
+start http://localhost:5001
 python app.py
 pause
 ```
