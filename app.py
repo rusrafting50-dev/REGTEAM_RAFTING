@@ -171,4 +171,7 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Порт 5001 — на него ведут 1_Запуск.bat (start http://localhost:5001)
+    # и адрес по умолчанию в CLAUDE.md; без явного port Flask слушает
+    # 5000, и сайт был недоступен по документированному адресу.
+    app.run(debug=True, port=5001)
