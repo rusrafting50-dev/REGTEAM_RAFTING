@@ -2,13 +2,11 @@
 chcp 65001 >nul
 cd /d "%~dp0"
 
-echo [1/4] Stop Flask (port 5001)...
-rem Убиваем только процесс, слушающий именно этот порт, а не все python.exe
-rem в системе - иначе запуск этого сайта попутно убивал бы COREZ/
-rem RAFTING_CFO/SPORTS_REFEREE, если они уже работают (и наоборот).
-for /f "tokens=5" %%p in ('netstat -aon ^| findstr /r /c:":5001[^0-9]" ^| findstr "LISTENING"') do (
-    taskkill /f /pid %%p 1>nul 2>nul
-)
+echo [1/4] Stop Flask on port 5001...
+rem Убиваем только процесс на этом порту, а не все python.exe в системе -
+rem иначе запуск этого сайта попутно убивал бы COREZ, RAFTING_CFO и
+rem SPORTS_REFEREE, если они уже работают, и наоборот.
+for /f "tokens=5" %%p in ('netstat -aon ^| findstr /r /c:":5001[^0-9]" ^| findstr "LISTENING"') do taskkill /f /pid %%p 1>nul 2>nul
 timeout /t 2 /nobreak >nul
 
 echo [2/4] Git pull...
