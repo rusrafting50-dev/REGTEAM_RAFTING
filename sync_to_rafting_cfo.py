@@ -66,7 +66,14 @@ def _собрать_данные(athlete):
         "rank": athlete.rank,
         "organization": athlete.organization,
         "territory": _субъект_рф(),
-        "national_team": athlete.national_team,
+        # RAFTING_CFO использует это поле, чтобы разложить спортсменов по
+        # вкладкам пол/возраст в разделе «Сборная команда» - ему нужна
+        # именно возрастная категория (athlete.age_category: "Мужчины"/
+        # "Юниоры"/"Юноши" и т.п., см. references.AGE_CATEGORIES), а не
+        # athlete.national_team - это другое поле, отметка о реальном
+        # включении в сборную России, почти всегда пустая у рядовых
+        # спортсменов. Названия полей совпали случайно - смыслы разные.
+        "national_team": athlete.age_category,
         "is_active": bool(athlete.is_active),
     }
 
