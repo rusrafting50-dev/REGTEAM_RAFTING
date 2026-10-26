@@ -10,6 +10,7 @@ from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import Engine
 
 from models import ListChangeRecord, ReportSettings, db
+from routes.api import bp as api_bp
 from routes.athletes import bp as athletes_bp
 from routes.import_export import bp as import_export_bp
 from routes.reports import bp as reports_bp
@@ -77,6 +78,7 @@ def create_app():
     app.jinja_env.filters["break_trainers"] = break_trainers
 
     db.init_app(app)
+    app.register_blueprint(api_bp)
     app.register_blueprint(athletes_bp)
     app.register_blueprint(import_export_bp)
     app.register_blueprint(reports_bp)
