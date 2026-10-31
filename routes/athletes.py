@@ -2,10 +2,11 @@
 import re
 from datetime import date, datetime
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
 import references
 from models import Athlete, ChangeLog, db
+from subjects import текущий_субъект_id
 from sync_to_rafting_cfo import отправить_всех, отправить_спортсмена, удалить_спортсмена
 
 bp = Blueprint("athletes", __name__, url_prefix="/athletes")
@@ -91,12 +92,22 @@ def _with_current_value(options, current_value):
 def _distinct_organizations():
     rows = (
         db.session.query(Athlete.organization)
-        .filter(Athlete.organization.isnot(None), Athlete.organization != "")
+        .filter(
+            Athlete.subject_id == текущий_субъект_id(),
+            Athlete.organization.isnot(None), Athlete.organization != "",
+        )
         .distinct()
         .order_by(Athlete.organization)
         .all()
     )
     return [row[0] for row in rows]
+
+
+def _get_athlete_or_404(athlete_id):
+    athlete = Athlete.query.get_or_404(athlete_id)
+    if athlete.subject_id != текущий_субъект_id():
+        abort(404)
+    return athlete
 
 
 def _render_athletes_list(
@@ -131,7 +142,7 @@ def _render_athletes_list(
 
 @bp.route("/")
 def athletes_list():
-    query = Athlete.query.filter_by(is_active=True)
+    query = Athlete.query.filter_by(is_active=True, subject_id=текущий_субъект_id())
     list_buttons = TEAM_AGE_CATEGORY_TYPES + [
         ("", "Тренеры", "athletes.athletes_trainers_list", [], "Тренеры"),
     ]
@@ -145,7 +156,8 @@ def athletes_list():
 @bp.route("/trainers")
 def athletes_trainers_list():
     query = Athlete.query.filter(
-        Athlete.category.op("REGEXP")(TRAINER_CATEGORY_PATTERN)
+        Athlete.subject_id == текущий_субъект_id(),
+        Athlete.category.op("REGEXP")(TRAINER_CATEGORY_PATTERN),
     )
     return _render_athletes_list(
         query, heading="Тренеры",
@@ -156,7 +168,10 @@ def athletes_trainers_list():
 
 def _make_age_category_view(age_categories, heading):
     def view():
-        query = Athlete.query.filter(Athlete.age_category.in_(age_categories))
+        query = Athlete.query.filter(
+            Athlete.subject_id == текущий_субъект_id(),
+            Athlete.age_category.in_(age_categories),
+        )
         return _render_athletes_list(
             query, heading=heading, show_add_button=False,
             age_category_filter_options=age_categories,
@@ -176,7 +191,7 @@ for _path, _label, _endpoint, _age_categories, _heading in TEAM_AGE_CATEGORY_TYP
 @bp.route("/new", methods=["GET", "POST"])
 def athletes_new():
     if request.method == "POST":
-        athlete = Athlete()
+        athlete = Athlete(subject_id=текущий_субъект_id())
         _fill_athlete_from_form(athlete, request.form)
         db.session.add(athlete)
         db.session.commit()
@@ -207,13 +222,13 @@ def athletes_new():
 
 @bp.route("/<int:athlete_id>")
 def athletes_detail(athlete_id):
-    athlete = Athlete.query.get_or_404(athlete_id)
+    athlete = _get_athlete_or_404(athlete_id)
     return render_template("athletes/detail.html", athlete=athlete)
 
 
 @bp.route("/<int:athlete_id>/edit", methods=["GET", "POST"])
 def athletes_edit(athlete_id):
-    athlete = Athlete.query.get_or_404(athlete_id)
+    athlete = _get_athlete_or_404(athlete_id)
 
     if request.method == "POST":
         _fill_athlete_from_form(athlete, request.form)
@@ -244,7 +259,7 @@ def athletes_edit(athlete_id):
 
 @bp.route("/<int:athlete_id>/deactivate", methods=["POST"])
 def athletes_deactivate(athlete_id):
-    athlete = Athlete.query.get_or_404(athlete_id)
+    athlete = _get_athlete_or_404(athlete_id)
     athlete.is_active = False
     db.session.add(
         ChangeLog(athlete_id=athlete.id, change_type="исключён", change_date=date.today())
@@ -256,7 +271,7 @@ def athletes_deactivate(athlete_id):
 
 @bp.route("/<int:athlete_id>/activate", methods=["POST"])
 def athletes_activate(athlete_id):
-    athlete = Athlete.query.get_or_404(athlete_id)
+    athlete = _get_athlete_or_404(athlete_id)
     is_first_add = not athlete.change_logs
     athlete.is_active = True
     db.session.add(
@@ -269,16 +284,17 @@ def athletes_activate(athlete_id):
 
 @bp.route("/<int:athlete_id>/send-to-site", methods=["POST"])
 def athletes_send_to_site(athlete_id):
-    athlete = Athlete.query.get_or_404(athlete_id)
+    athlete = _get_athlete_or_404(athlete_id)
     _синхронизировать(athlete)
     return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
 
 @bp.route("/send-all-to-site", methods=["POST"])
 def athletes_send_all_to_site():
-    """Отправляет на RAFTING_CFO всех спортсменов и тренеров разом (и
-    включённых, и исключённых из состава) — см. отправить_всех."""
-    athletes = Athlete.query.all()
+    """Отправляет на RAFTING_CFO всех спортсменов и тренеров текущего
+    субъекта РФ разом (и включённых, и исключённых из состава) — см.
+    отправить_всех."""
+    athletes = Athlete.query.filter_by(subject_id=текущий_субъект_id()).all()
     success, message = отправить_всех(athletes)
     if success:
         flash(f"Отправлено на сайт: {len(athletes)}.", "success")
@@ -289,7 +305,7 @@ def athletes_send_all_to_site():
 
 @bp.route("/<int:athlete_id>/delete", methods=["POST"])
 def athletes_delete(athlete_id):
-    athlete = Athlete.query.get_or_404(athlete_id)
+    athlete = _get_athlete_or_404(athlete_id)
     is_trainer = bool(athlete.category and re.search(TRAINER_CATEGORY_PATTERN, athlete.category))
     db.session.delete(athlete)
     db.session.commit()
@@ -303,6 +319,8 @@ def athletes_delete(athlete_id):
 @bp.route("/change-logs/<int:log_id>/edit", methods=["POST"])
 def change_log_edit(log_id):
     log = ChangeLog.query.get_or_404(log_id)
+    if log.athlete.subject_id != текущий_субъект_id():
+        abort(404)
     date_raw = request.form.get("change_date", "").strip()
     if date_raw:
         try:
@@ -319,6 +337,8 @@ def change_log_edit(log_id):
 @bp.route("/change-logs/<int:log_id>/delete", methods=["POST"])
 def change_log_delete(log_id):
     log = ChangeLog.query.get_or_404(log_id)
+    if log.athlete.subject_id != текущий_субъект_id():
+        abort(404)
     athlete_id = log.athlete_id
     db.session.delete(log)
     db.session.commit()

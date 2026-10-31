@@ -4,16 +4,17 @@ import re
 from datetime import date, datetime
 
 from dotenv import load_dotenv
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from markupsafe import Markup, escape
 from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import Engine
 
-from models import ListChangeRecord, ReportSettings, db
+from models import ListChangeRecord, ReportSettings, Subject, db
 from routes.api import bp as api_bp
 from routes.athletes import bp as athletes_bp
 from routes.import_export import bp as import_export_bp
 from routes.reports import bp as reports_bp
+from subjects import обеспечить_субъекты, текущий_субъект, текущий_субъект_id
 
 # override=True — .env должен побеждать даже если такая переменная уже
 # случайно задана на уровне Windows (иначе пустое/старое системное
@@ -86,18 +87,48 @@ def create_app():
     with app.app_context():
         db.create_all()
         _sync_missing_columns()
+        обеспечить_субъекты()
+
+    @app.context_processor
+    def inject_subjects():
+        return {
+            "all_subjects": Subject.query.order_by(Subject.id).all(),
+            "current_subject": текущий_субъект(),
+        }
 
     @app.route("/")
     def index():
         return redirect(url_for("athletes.athletes_list"))
 
+    @app.route("/subjects/<int:subject_id>/switch")
+    def subjects_switch(subject_id):
+        subject = Subject.query.get_or_404(subject_id)
+        session["subject_id"] = subject.id
+        return redirect(url_for("athletes.athletes_list"))
+
+    @app.route("/subjects", methods=["POST"])
+    def subjects_add():
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Укажите наименование субъекта Российской Федерации", "error")
+            return redirect(request.referrer or url_for("athletes.athletes_list"))
+        if Subject.query.filter_by(name=name).first():
+            flash("Такой субъект уже есть в списке", "warning")
+            return redirect(request.referrer or url_for("athletes.athletes_list"))
+        subject = Subject(name=name)
+        db.session.add(subject)
+        db.session.commit()
+        flash(f"Субъект «{name}» добавлен", "success")
+        session["subject_id"] = subject.id
+        return redirect(url_for("athletes.athletes_list"))
+
     @app.route("/settings", methods=["GET", "POST"])
     def settings():
-        report_settings = ReportSettings.query.first()
+        report_settings = ReportSettings.query.filter_by(subject_id=текущий_субъект_id()).first()
 
         if request.method == "POST":
             if not report_settings:
-                report_settings = ReportSettings()
+                report_settings = ReportSettings(subject_id=текущий_субъект_id())
                 db.session.add(report_settings)
             report_settings.organization_name = request.form.get("organization_name", "").strip()
             report_settings.chairman_position = request.form.get("chairman_position", "").strip()
@@ -114,7 +145,7 @@ def create_app():
             flash("Настройки сохранены", "success")
             return redirect(url_for("settings"))
 
-        list_changes = ListChangeRecord.query.order_by(
+        list_changes = ListChangeRecord.query.filter_by(subject_id=текущий_субъект_id()).order_by(
             ListChangeRecord.date.desc(), ListChangeRecord.id.desc()
         ).all()
         return render_template(
@@ -134,7 +165,7 @@ def create_app():
         except ValueError:
             flash("Некорректная дата", "error")
             return redirect(url_for("settings"))
-        db.session.add(ListChangeRecord(number=number, date=change_date))
+        db.session.add(ListChangeRecord(subject_id=текущий_субъект_id(), number=number, date=change_date))
         db.session.commit()
         flash("Изменение в список добавлено", "success")
         return redirect(url_for("settings"))
@@ -142,6 +173,8 @@ def create_app():
     @app.route("/settings/list-changes/<int:record_id>/edit", methods=["POST"])
     def settings_list_changes_edit(record_id):
         record = ListChangeRecord.query.get_or_404(record_id)
+        if record.subject_id != текущий_субъект_id():
+            abort(404)
         number = request.form.get("number", "").strip()
         date_raw = request.form.get("date", "").strip()
         if not number or not date_raw:
@@ -161,6 +194,8 @@ def create_app():
     @app.route("/settings/list-changes/<int:record_id>/delete", methods=["POST"])
     def settings_list_changes_delete(record_id):
         record = ListChangeRecord.query.get_or_404(record_id)
+        if record.subject_id != текущий_субъект_id():
+            abort(404)
         db.session.delete(record)
         db.session.commit()
         flash("Изменение в список удалено", "success")

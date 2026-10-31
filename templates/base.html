@@ -16,8 +16,29 @@
             </button>
             <div class="collapse navbar-collapse" id="navMain">
                 <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('athletes.athletes_list') }}">Список</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                            {{ current_subject.name if current_subject else 'Субъект РФ' }}
+                        </a>
+                        <ul class="dropdown-menu">
+                            {% for subject in all_subjects %}
+                            <li>
+                                <a class="dropdown-item {{ 'active' if current_subject and subject.id == current_subject.id }}"
+                                   href="{{ url_for('subjects_switch', subject_id=subject.id) }}">{{ subject.name }}</a>
+                            </li>
+                            {% endfor %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button type="button" class="dropdown-item" id="btnToggleAddSubject">+ Добавить субъект Российской Федерации</button>
+                            </li>
+                            <li id="formAddSubjectWrap" class="px-3 py-1" style="display:none;">
+                                <form method="post" action="{{ url_for('subjects_add') }}" class="d-flex gap-1">
+                                    <input type="text" name="name" class="form-control form-control-sm"
+                                           placeholder="Наименование субъекта РФ" required>
+                                    <button type="submit" class="btn btn-sm btn-primary">Добавить</button>
+                                </form>
+                            </li>
+                        </ul>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('import_export.import_index') }}">Импорт</a>

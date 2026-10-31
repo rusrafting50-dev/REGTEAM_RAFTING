@@ -6,10 +6,23 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 
+class Subject(db.Model):
+    """Субъект Российской Федерации, обслуживаемый этим инстансом —
+    переключатель в шапке делит базу на независимые разделы (каждый
+    субъект видит только свои записи)."""
+    __tablename__ = "subject"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class Athlete(db.Model):
     __tablename__ = "athlete"
 
     id = db.Column(db.Integer, primary_key=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subject.id"), nullable=False)
+    subject = db.relationship("Subject")
 
     last_name = db.Column(db.String(100), nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
@@ -65,6 +78,7 @@ class ReportSettings(db.Model):
     __tablename__ = "report_settings"
 
     id = db.Column(db.Integer, primary_key=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subject.id"), nullable=False)
     organization_name = db.Column(db.String(300))
     chairman_position = db.Column(db.String(200))
     chairman_name = db.Column(db.String(200))
@@ -78,5 +92,6 @@ class ListChangeRecord(db.Model):
     __tablename__ = "list_change_record"
 
     id = db.Column(db.Integer, primary_key=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subject.id"), nullable=False)
     number = db.Column(db.String(50), nullable=False)
     date = db.Column(db.Date, nullable=False)

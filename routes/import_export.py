@@ -7,6 +7,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from openpyxl.utils.exceptions import InvalidFileException
 
 from models import Athlete, ChangeLog, db
+from subjects import текущий_субъект_id
 
 bp = Blueprint("import_export", __name__)
 
@@ -96,6 +97,7 @@ def _load_sheet(file_storage):
 
 def _find_existing(fields):
     return Athlete.query.filter_by(
+        subject_id=текущий_субъект_id(),
         last_name=fields["last_name"],
         first_name=fields["first_name"],
         middle_name=fields["middle_name"],
@@ -138,7 +140,7 @@ def import_upload():
                 setattr(athlete, key, value)
             updated += 1
         else:
-            db.session.add(Athlete(is_active=True, **fields))
+            db.session.add(Athlete(subject_id=текущий_субъект_id(), is_active=True, **fields))
             added += 1
 
     db.session.commit()
@@ -201,7 +203,7 @@ def import_changes_upload():
                 not_found += 1
         else:  # include
             if not athlete:
-                athlete = Athlete(**fields)
+                athlete = Athlete(subject_id=текущий_субъект_id(), **fields)
                 db.session.add(athlete)
                 db.session.flush()
             athlete.is_active = True

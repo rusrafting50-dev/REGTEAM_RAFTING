@@ -7,12 +7,13 @@ from flask import Blueprint, render_template, request, send_file
 import references
 from excel_generator import generate_changes_report, generate_report
 from models import Athlete, ChangeLog, ReportSettings, db
+from subjects import текущий_субъект_id
 
 bp = Blueprint("reports", __name__, url_prefix="/reports")
 
 
 def get_settings():
-    return ReportSettings.query.first()
+    return ReportSettings.query.filter_by(subject_id=текущий_субъект_id()).first()
 
 
 def apply_filters(query, args):
@@ -45,9 +46,11 @@ def _athlete_ids_active_as_of(doc_date):
     команде» (как и в выгрузке «Изменения в список»). Для спортсменов без единой записи истории
     (например, добавленных обычным импортом основного списка) используется их текущий статус
     is_active, чтобы такие данные не пропадали из отчёта."""
+    subject_id = текущий_субъект_id()
     logs = (
         ChangeLog.query
-        .filter(ChangeLog.change_date <= doc_date)
+        .join(Athlete, ChangeLog.athlete_id == Athlete.id)
+        .filter(Athlete.subject_id == subject_id, ChangeLog.change_date <= doc_date)
         .order_by(ChangeLog.change_date, ChangeLog.id)
         .all()
     )
@@ -56,10 +59,18 @@ def _athlete_ids_active_as_of(doc_date):
         status_as_of[log.athlete_id] = log.change_type
     included_ids = {aid for aid, status in status_as_of.items() if status == "включён"}
 
-    history_athlete_ids = {aid for (aid,) in db.session.query(ChangeLog.athlete_id).distinct()}
+    history_athlete_ids = {
+        aid for (aid,) in db.session.query(ChangeLog.athlete_id)
+        .join(Athlete, ChangeLog.athlete_id == Athlete.id)
+        .filter(Athlete.subject_id == subject_id)
+        .distinct()
+    }
     no_history_active = (
         db.session.query(Athlete.id)
-        .filter(Athlete.is_active.is_(True), ~Athlete.id.in_(history_athlete_ids))
+        .filter(
+            Athlete.subject_id == subject_id,
+            Athlete.is_active.is_(True), ~Athlete.id.in_(history_athlete_ids),
+        )
         .all()
     )
     included_ids.update(aid for (aid,) in no_history_active)
@@ -92,7 +103,11 @@ def get_changes_lists(args):
     doc_date = datetime.strptime(doc_date_raw, "%Y-%m-%d").date() if doc_date_raw else datetime.today().date()
     doc_number = args.get("document_number", "").strip()
 
-    query = ChangeLog.query.filter(ChangeLog.change_date == doc_date)
+    query = (
+        ChangeLog.query
+        .join(Athlete, ChangeLog.athlete_id == Athlete.id)
+        .filter(Athlete.subject_id == текущий_субъект_id(), ChangeLog.change_date == doc_date)
+    )
     if doc_number:
         query = query.filter(ChangeLog.document_number == doc_number)
     logs = query.all()

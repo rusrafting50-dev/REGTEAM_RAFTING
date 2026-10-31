@@ -41,7 +41,14 @@ def _ключ():
     return os.environ.get("RAFTING_CFO_API_KEY", "")
 
 
-def _субъект_рф():
+def _субъект_рф(athlete):
+    """Теперь один инстанс REGTEAM_RAFTING обслуживает НЕСКОЛЬКО субъектов
+    РФ (см. subjects.py) — наименование берётся из собственного субъекта
+    спортсмена, а не из фиксированной настройки .env (она остаётся
+    резервным значением на случай отсутствующей связи — не должно
+    происходить при nullable=False, но на всякий случай)."""
+    if athlete.subject and athlete.subject.name:
+        return athlete.subject.name
     return os.environ.get("RAFTING_CFO_REGION_SUBJECT_NAME", "")
 
 
@@ -65,7 +72,7 @@ def _собрать_данные(athlete):
         "discipline": athlete.discipline,
         "rank": athlete.rank,
         "organization": athlete.organization,
-        "territory": _субъект_рф(),
+        "territory": _субъект_рф(athlete),
         # RAFTING_CFO использует это поле, чтобы разложить спортсменов по
         # вкладкам пол/возраст в разделе «Сборная команда» - ему нужна
         # именно возрастная категория (athlete.age_category: "Мужчины"/
@@ -108,8 +115,6 @@ def отправить_спортсмена(athlete):
     """Отправляет ОДНОГО спортсмена/тренера на RAFTING_CFO (создание или
     обновление — сторона RAFTING_CFO определяет это сама по source_id).
     Возвращает (успех, сообщение)."""
-    if not _субъект_рф():
-        return False, "RAFTING_CFO_REGION_SUBJECT_NAME не задан в .env — см. .env.example"
     return _отправить([_собрать_данные(athlete)])
 
 
@@ -118,11 +123,9 @@ def отправить_всех(athletes):
     (кнопка «Отправить всех на сайт» на странице списка) — так на сайт
     гарантированно попадают и включения, и исключения из состава, даже
     если кто-то не был отправлен по отдельности. athletes — итерируемое
-    Athlete (обычно Athlete.query.all(), включая is_active=False —
-    сторона RAFTING_CFO сама решает, где кого показывать). Возвращает
-    (успех, сообщение)."""
-    if not _субъект_рф():
-        return False, "RAFTING_CFO_REGION_SUBJECT_NAME не задан в .env — см. .env.example"
+    Athlete (обычно Athlete.query.filter_by(subject_id=...), включая
+    is_active=False — сторона RAFTING_CFO сама решает, где кого
+    показывать). Возвращает (успех, сообщение)."""
     items = [_собрать_данные(athlete) for athlete in athletes]
     if not items:
         return True, "Список пуст — отправлять нечего."
