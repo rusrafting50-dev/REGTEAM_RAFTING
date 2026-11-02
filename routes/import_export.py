@@ -54,21 +54,28 @@ def _find_header_row(ws):
     return None
 
 
+def _at(row, index):
+    """Значение ячейки по индексу — None, если в строке нет такого столбца
+    (openpyxl обрезает строку по фактически заполненной ширине листа, у
+    некоторых строк она может быть короче 15 столбцов)."""
+    return row[index] if index < len(row) else None
+
+
 def _row_to_athlete_fields(row):
     """15-колоночная строка данных -> словарь полей Athlete (без ФИО)."""
-    last_name, first_name, middle_name = _split_full_name(_clean(row[1]))
+    last_name, first_name, middle_name = _split_full_name(_clean(_at(row, 1)))
     values = [
-        _clean(row[4]), _clean(row[5]), _clean(row[6]), _clean(row[7]),
-        _clean(row[8]), _clean(row[9]), _clean(row[10]),
-        _clean(row[11]), _clean(row[12]), _clean(row[13]), _clean(row[14]),
+        _clean(_at(row, 4)), _clean(_at(row, 5)), _clean(_at(row, 6)), _clean(_at(row, 7)),
+        _clean(_at(row, 8)), _clean(_at(row, 9)), _clean(_at(row, 10)),
+        _clean(_at(row, 11)), _clean(_at(row, 12)), _clean(_at(row, 13)), _clean(_at(row, 14)),
     ]
     fields = dict(zip(FIELD_NAMES, values))
     fields.update(
         last_name=last_name,
         first_name=first_name,
         middle_name=middle_name,
-        birth_date=_to_date(row[2]),
-        gender=_clean(row[3]),
+        birth_date=_to_date(_at(row, 2)),
+        gender=_clean(_at(row, 3)),
     )
     return fields
 
@@ -176,7 +183,8 @@ def import_changes_upload():
     section = None
 
     for row in ws.iter_rows(min_row=header_row + 1, values_only=True):
-        marker = row[0].strip().lower() if isinstance(row[0], str) else ""
+        first_cell = _at(row, 0)
+        marker = first_cell.strip().lower() if isinstance(first_cell, str) else ""
         if marker in ("исключить", "включить"):
             section = "exclude" if marker == "исключить" else "include"
             continue
