@@ -15,7 +15,7 @@ from routes.api import bp as api_bp
 from routes.athletes import bp as athletes_bp
 from routes.import_export import bp as import_export_bp
 from routes.reports import bp as reports_bp
-from subjects import обеспечить_субъекты, текущий_субъект, текущий_субъект_id
+from subjects import обеспечить_субъекты, результат_субъекта_заголовок, текущий_субъект, текущий_субъект_id
 
 # override=True — .env должен побеждать даже если такая переменная уже
 # случайно задана на уровне Windows (иначе пустое/старое системное
@@ -97,6 +97,7 @@ def create_app():
             "current_subject": текущий_субъект(),
             "current_subject_organizations": организации_субъекта(текущий_субъект_id()),
             "current_organization": текущая_организация(),
+            "regional_result_label": результат_субъекта_заголовок(текущий_субъект()),
         }
 
     @app.route("/")

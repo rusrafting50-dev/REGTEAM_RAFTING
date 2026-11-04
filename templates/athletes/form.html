@@ -115,7 +115,7 @@
         </div>
 
         <div class="col-md-4">
-            <label class="form-label">Результат — Московские областные</label>
+            <label class="form-label">Результат — {{ regional_result_label }}</label>
             <input type="text" name="result_regional" class="form-control" list="result-regional-list" value="{{ athlete.result_regional if athlete else '' }}">
         </div>
         <div class="col-md-4">

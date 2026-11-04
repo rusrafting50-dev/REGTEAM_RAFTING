@@ -78,7 +78,8 @@
             <th rowspan="2" class="col-national-team">Состав спортивной сборной команды Российской Федерации</th>
         </tr>
         <tr class="text-center">
-            <th class="header-vertical-cell"><div class="header-vertical-wrap"><span class="header-vertical">Московские<br>областные</span></div></th>
+            {% set regional_label_parts = regional_result_label.split(' ', 1) %}
+            <th class="header-vertical-cell"><div class="header-vertical-wrap"><span class="header-vertical">{{ regional_label_parts[0] }}{% if regional_label_parts|length > 1 %}<br>{{ regional_label_parts[1] }}{% endif %}</span></div></th>
             <th class="header-vertical-cell"><div class="header-vertical-wrap"><span class="header-vertical">Всероссийские</span></div></th>
             <th class="header-vertical-cell"><div class="header-vertical-wrap"><span class="header-vertical">Международные</span></div></th>
         </tr>

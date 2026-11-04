@@ -48,7 +48,7 @@
             <tr><th>Субъект Российской Федерации</th><td>{{ organization_subject.name if organization_subject }}</td></tr>
             <tr><th>Территориальная принадлежность</th><td>{{ athlete.territory }}</td></tr>
             <tr><th>Личный тренер</th><td>{{ athlete.trainer }}</td></tr>
-            <tr><th>Результат — Московские областные</th><td>{{ athlete.result_regional }}</td></tr>
+            <tr><th>Результат — {{ regional_result_label }}</th><td>{{ athlete.result_regional }}</td></tr>
             <tr><th>Результат — Всероссийские</th><td>{{ athlete.result_national }}</td></tr>
             <tr><th>Результат — Международные</th><td>{{ athlete.result_international }}</td></tr>
             <tr><th>Состав сборной РФ</th><td>{{ athlete.national_team }}</td></tr>

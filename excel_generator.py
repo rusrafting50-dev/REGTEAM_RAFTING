@@ -109,8 +109,10 @@ def _count_by_category(athletes):
     return trainers, specialists, sportsmen
 
 
-def _write_athletes_header(ws, header_row, header_font=BOLD_12):
-    """Заголовок таблицы (2 строки) + строка нумерации столбцов. Возвращает первую строку данных."""
+def _write_athletes_header(ws, header_row, header_font=BOLD_12, regional_result_label="Московские областные"):
+    """Заголовок таблицы (2 строки) + строка нумерации столбцов. Возвращает первую строку данных.
+    regional_result_label — подпись столбца результатов УРОВНЯ СУБЪЕКТА РФ,
+    своя для каждого субъекта (см. subjects.REGIONAL_RESULT_LABELS)."""
     for col in range(1, 12):
         letter = get_column_letter(col)
         _merge_value(
@@ -123,7 +125,7 @@ def _write_athletes_header(ws, header_row, header_font=BOLD_12):
         "Высший результат сезона на официальных спортивных соревнованиях",
         header_font, CENTER_WRAP,
     )
-    for letter, text in (("L", "Московские областные"), ("M", "Всероссийские"), ("N", "Международные")):
+    for letter, text in (("L", regional_result_label), ("M", "Всероссийские"), ("N", "Международные")):
         cell = ws[f"{letter}{header_row + 1}"]
         cell.value = text
         cell.font = header_font
@@ -171,7 +173,7 @@ def _write_athlete_row(ws, row, index, athlete, font=DATA_FONT):
     # под перенесённый текст (wrap_text), так что длинные значения не обрезаются.
 
 
-def generate_report(athletes, settings, doc_date):
+def generate_report(athletes, settings, doc_date, regional_result_label="Московские областные"):
     """Формирует итоговый список кандидатов в сборную команду МО."""
     wb = Workbook()
     ws = wb.active
@@ -257,14 +259,14 @@ def generate_report(athletes, settings, doc_date):
 
     _write_counters(ws, "L9:M9", "спортсмены:", "N9", sportsmen)
 
-    first_data_row = _write_athletes_header(ws, 11, header_font=PLAIN_12)
+    first_data_row = _write_athletes_header(ws, 11, header_font=PLAIN_12, regional_result_label=regional_result_label)
     for i, athlete in enumerate(athletes, start=1):
         _write_athlete_row(ws, first_data_row + i - 1, i, athlete, font=DATA_FONT_12)
 
     return wb
 
 
-def generate_changes_report(exclude_list, include_list, settings, doc_date, doc_number):
+def generate_changes_report(exclude_list, include_list, settings, doc_date, doc_number, regional_result_label="Московские областные"):
     """Формирует документ «Изменения в список» с разделами Исключить / Включить."""
     wb = Workbook()
     ws = wb.active
@@ -311,7 +313,7 @@ def generate_changes_report(exclude_list, include_list, settings, doc_date, doc_
     _merge_value(ws, "G6:I6", "(наименование вида спорта)", CAPTION_10, CENTER_TOP_WRAP)
     _set_border_range(ws, "G6:I6", BORDER_TOP)
 
-    row = _write_athletes_header(ws, 9, header_font=PLAIN_12)
+    row = _write_athletes_header(ws, 9, header_font=PLAIN_12, regional_result_label=regional_result_label)
 
     _merge_value(ws, f"A{row}:O{row}", "Исключить", BOLD_12, CENTER)
     for cell in ws[row]:

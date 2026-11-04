@@ -7,7 +7,7 @@ from flask import Blueprint, render_template, request, send_file
 import references
 from excel_generator import generate_changes_report, generate_report
 from models import Athlete, ChangeLog, ReportSettings, db
-from subjects import текущий_субъект_id
+from subjects import результат_субъекта_заголовок, текущий_субъект, текущий_субъект_id
 
 bp = Blueprint("reports", __name__, url_prefix="/reports")
 
@@ -148,7 +148,7 @@ def reports_export():
     settings = get_settings()
     doc_date = get_doc_date(request.form)
 
-    wb = generate_report(athletes, settings, doc_date)
+    wb = generate_report(athletes, settings, doc_date, regional_result_label=результат_субъекта_заголовок(текущий_субъект()))
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
@@ -179,7 +179,10 @@ def reports_changes_export():
     exclude_list, include_list, doc_date, doc_number = get_changes_lists(request.form)
     settings = get_settings()
 
-    wb = generate_changes_report(exclude_list, include_list, settings, doc_date, doc_number)
+    wb = generate_changes_report(
+        exclude_list, include_list, settings, doc_date, doc_number,
+        regional_result_label=результат_субъекта_заголовок(текущий_субъект()),
+    )
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
