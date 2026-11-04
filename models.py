@@ -17,6 +17,20 @@ class Subject(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class Organization(db.Model):
+    """Физкультурно-спортивная организация в рамках субъекта РФ — такой
+    же переключатель в шапке, как Subject, но на уровень ниже: список
+    сборной команды конкретной организации (внутри текущего субъекта)."""
+    __tablename__ = "organization"
+    __table_args__ = (db.UniqueConstraint("subject_id", "name", name="uq_organization_subject_name"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subject.id"), nullable=False)
+    subject = db.relationship("Subject")
+    name = db.Column(db.String(300), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class Athlete(db.Model):
     __tablename__ = "athlete"
 

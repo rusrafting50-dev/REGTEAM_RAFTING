@@ -6,6 +6,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 
 import references
 from models import Athlete, ChangeLog, db
+from organizations import субъект_по_организации
 from subjects import текущий_субъект_id
 from sync_to_rafting_cfo import отправить_всех, отправить_спортсмена, удалить_спортсмена
 
@@ -223,7 +224,8 @@ def athletes_new():
 @bp.route("/<int:athlete_id>")
 def athletes_detail(athlete_id):
     athlete = _get_athlete_or_404(athlete_id)
-    return render_template("athletes/detail.html", athlete=athlete)
+    organization_subject = субъект_по_организации(athlete.organization, athlete.subject_id)
+    return render_template("athletes/detail.html", athlete=athlete, organization_subject=organization_subject)
 
 
 @bp.route("/<int:athlete_id>/edit", methods=["GET", "POST"])

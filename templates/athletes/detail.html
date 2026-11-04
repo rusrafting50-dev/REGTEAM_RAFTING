@@ -45,6 +45,7 @@
             <tr><th>Возрастная категория (ЕВСК)</th><td>{{ athlete.age_category }}</td></tr>
             <tr><th>Спортивное звание, разряд</th><td>{{ athlete.rank }}</td></tr>
             <tr><th>Организация</th><td>{{ athlete.organization }}</td></tr>
+            <tr><th>Субъект Российской Федерации</th><td>{{ organization_subject.name if organization_subject }}</td></tr>
             <tr><th>Территориальная принадлежность</th><td>{{ athlete.territory }}</td></tr>
             <tr><th>Личный тренер</th><td>{{ athlete.trainer }}</td></tr>
             <tr><th>Результат — Московские областные</th><td>{{ athlete.result_regional }}</td></tr>

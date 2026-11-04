@@ -1,18 +1,24 @@
 // main.js — общий JS АтлетБазы
 
-// Переключатель субъектов РФ в шапке — кнопка «+ Добавить субъект
-// Российской Федерации» показывает/скрывает поле ввода наименования.
+// Переключатели субъектов РФ и организаций в шапке — кнопка «+ Добавить
+// ...» показывает/скрывает поле ввода наименования.
 document.addEventListener("DOMContentLoaded", () => {
-    const toggleButton = document.getElementById("btnToggleAddSubject");
-    const formWrap = document.getElementById("formAddSubjectWrap");
-    if (toggleButton && formWrap) {
-        toggleButton.addEventListener("click", () => {
-            const isHidden = formWrap.style.display === "none";
-            formWrap.style.display = isHidden ? "block" : "none";
-            if (isHidden) {
-                const input = formWrap.querySelector("input[name='name']");
-                if (input) input.focus();
-            }
-        });
-    }
+    const toggles = [
+        ["btnToggleAddSubject", "formAddSubjectWrap"],
+        ["btnToggleAddOrganization", "formAddOrganizationWrap"],
+    ];
+    toggles.forEach(([buttonId, wrapId]) => {
+        const toggleButton = document.getElementById(buttonId);
+        const formWrap = document.getElementById(wrapId);
+        if (toggleButton && formWrap) {
+            toggleButton.addEventListener("click", () => {
+                const isHidden = formWrap.style.display === "none";
+                formWrap.style.display = isHidden ? "block" : "none";
+                if (isHidden) {
+                    const input = formWrap.querySelector("input[name='name']");
+                    if (input) input.focus();
+                }
+            });
+        }
+    });
 });

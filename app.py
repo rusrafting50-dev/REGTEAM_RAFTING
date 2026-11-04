@@ -9,7 +9,8 @@ from markupsafe import Markup, escape
 from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import Engine
 
-from models import ListChangeRecord, ReportSettings, Subject, db
+from models import ListChangeRecord, Organization, ReportSettings, Subject, db
+from organizations import организации_субъекта
 from routes.api import bp as api_bp
 from routes.athletes import bp as athletes_bp
 from routes.import_export import bp as import_export_bp
@@ -94,6 +95,7 @@ def create_app():
         return {
             "all_subjects": Subject.query.order_by(Subject.id).all(),
             "current_subject": текущий_субъект(),
+            "current_subject_organizations": организации_субъекта(текущий_субъект_id()),
         }
 
     @app.route("/")
@@ -121,6 +123,21 @@ def create_app():
         flash(f"Субъект «{name}» добавлен", "success")
         session["subject_id"] = subject.id
         return redirect(url_for("athletes.athletes_list"))
+
+    @app.route("/organizations", methods=["POST"])
+    def organizations_add():
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Укажите наименование организации", "error")
+            return redirect(request.referrer or url_for("athletes.athletes_list"))
+        subject_id = текущий_субъект_id()
+        if Organization.query.filter_by(subject_id=subject_id, name=name).first():
+            flash("Такая организация уже есть в списке", "warning")
+            return redirect(request.referrer or url_for("athletes.athletes_list"))
+        db.session.add(Organization(subject_id=subject_id, name=name))
+        db.session.commit()
+        flash(f"Организация «{name}» добавлена", "success")
+        return redirect(url_for("athletes.athletes_list", organization=name))
 
     @app.route("/settings", methods=["GET", "POST"])
     def settings():
