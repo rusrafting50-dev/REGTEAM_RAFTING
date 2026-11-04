@@ -201,7 +201,7 @@ def _make_age_category_view(age_categories, heading):
         )
         query = _scope_to_organization(query)
         return _render_athletes_list(
-            query, heading=heading, show_add_button=False, list_buttons=LIST_BUTTONS,
+            query, heading=heading, list_buttons=LIST_BUTTONS,
             age_category_filter_options=age_categories,
             highlight_active=True,
         )
