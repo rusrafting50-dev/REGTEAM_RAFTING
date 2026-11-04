@@ -40,6 +40,16 @@ TEAM_AGE_CATEGORY_TYPES = [
     ("/team/youth", "Юноши, девушки", "athletes.athletes_team_youth", ["Юноши", "Девушки"], "Спортсмены: Юноши, девушки"),
 ]
 
+# Тот же ряд кнопок показывается на ВСЕХ связанных страницах (общий
+# список, каждая возрастная категория, тренеры) — какая из них сейчас
+# активна, определяется в шаблоне по request.endpoint (см.
+# templates/athletes/list.html), а не передаётся отдельным флагом.
+LIST_BUTTONS = (
+    [("", "Все возрастные категории", "athletes.athletes_list", [], "Все возрастные категории")]
+    + TEAM_AGE_CATEGORY_TYPES
+    + [("", "Тренеры", "athletes.athletes_trainers_list", [], "Тренеры")]
+)
+
 # Тренер / Главный тренер / тренер — без учёта регистра
 TRAINER_CATEGORY_PATTERN = r"(?i)тренер"
 
@@ -161,12 +171,9 @@ def athletes_list():
     organization = текущая_организация()
     query = Athlete.query.filter_by(is_active=True, subject_id=текущий_субъект_id())
     query = _scope_to_organization(query)
-    list_buttons = TEAM_AGE_CATEGORY_TYPES + [
-        ("", "Тренеры", "athletes.athletes_trainers_list", [], "Тренеры"),
-    ]
     heading = f"Спортсмены и специалисты: {organization.name}" if organization else "Список сборной команды"
     return _render_athletes_list(
-        query, list_buttons=list_buttons,
+        query, list_buttons=LIST_BUTTONS,
         heading=heading,
         show_add_button=False, highlight_active=False,
     )
@@ -180,7 +187,7 @@ def athletes_trainers_list():
     )
     query = _scope_to_organization(query)
     return _render_athletes_list(
-        query, heading="Тренеры",
+        query, heading="Тренеры", list_buttons=LIST_BUTTONS,
         add_button_label="Добавить тренера", add_form_variant="trainer",
         age_category_filter_options=TRAINER_AGE_CATEGORY_OPTIONS,
     )
@@ -194,7 +201,7 @@ def _make_age_category_view(age_categories, heading):
         )
         query = _scope_to_organization(query)
         return _render_athletes_list(
-            query, heading=heading, show_add_button=False,
+            query, heading=heading, show_add_button=False, list_buttons=LIST_BUTTONS,
             age_category_filter_options=age_categories,
             highlight_active=True,
         )
