@@ -10,11 +10,27 @@
 # organization остаётся свободным текстовым полем (как и было) —
 # справочник Organization лишь даёт готовые пункты меню для перехода,
 # точное совпадение по имени.
+#
+# Текущая выбранная организация хранится в сессии (как и текущий
+# субъект) — только чтобы шапка показывала её наименование вместо
+# статичной надписи «Сборная команда» (она же — пункт сброса фильтра
+# на существующую страницу /athletes/ без фильтра).
+from flask import session
+
 from models import Organization
 
 
 def организации_субъекта(subject_id):
     return Organization.query.filter_by(subject_id=subject_id).order_by(Organization.name).all()
+
+
+def текущая_организация_id():
+    return session.get("organization_id")
+
+
+def текущая_организация():
+    organization_id = текущая_организация_id()
+    return Organization.query.get(organization_id) if organization_id else None
 
 
 def субъект_по_организации(organization_name, subject_id=None):

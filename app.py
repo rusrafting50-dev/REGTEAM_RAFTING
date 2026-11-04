@@ -10,7 +10,7 @@ from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import Engine
 
 from models import ListChangeRecord, Organization, ReportSettings, Subject, db
-from organizations import организации_субъекта
+from organizations import организации_субъекта, текущая_организация
 from routes.api import bp as api_bp
 from routes.athletes import bp as athletes_bp
 from routes.import_export import bp as import_export_bp
@@ -96,6 +96,7 @@ def create_app():
             "all_subjects": Subject.query.order_by(Subject.id).all(),
             "current_subject": текущий_субъект(),
             "current_subject_organizations": организации_субъекта(текущий_субъект_id()),
+            "current_organization": текущая_организация(),
         }
 
     @app.route("/")
@@ -106,6 +107,7 @@ def create_app():
     def subjects_switch(subject_id):
         subject = Subject.query.get_or_404(subject_id)
         session["subject_id"] = subject.id
+        session.pop("organization_id", None)  # организация прошлого субъекта здесь больше не действует
         return redirect(url_for("athletes.athletes_list"))
 
     @app.route("/subjects", methods=["POST"])
@@ -122,6 +124,18 @@ def create_app():
         db.session.commit()
         flash(f"Субъект «{name}» добавлен", "success")
         session["subject_id"] = subject.id
+        session.pop("organization_id", None)
+        return redirect(url_for("athletes.athletes_list"))
+
+    @app.route("/organizations/<int:organization_id>/switch")
+    def organizations_switch(organization_id):
+        organization = Organization.query.get_or_404(organization_id)
+        session["organization_id"] = organization.id
+        return redirect(url_for("athletes.athletes_list", organization=organization.name))
+
+    @app.route("/organizations/clear")
+    def organizations_clear():
+        session.pop("organization_id", None)
         return redirect(url_for("athletes.athletes_list"))
 
     @app.route("/organizations", methods=["POST"])
@@ -134,9 +148,11 @@ def create_app():
         if Organization.query.filter_by(subject_id=subject_id, name=name).first():
             flash("Такая организация уже есть в списке", "warning")
             return redirect(request.referrer or url_for("athletes.athletes_list"))
-        db.session.add(Organization(subject_id=subject_id, name=name))
+        organization = Organization(subject_id=subject_id, name=name)
+        db.session.add(organization)
         db.session.commit()
         flash(f"Организация «{name}» добавлена", "success")
+        session["organization_id"] = organization.id
         return redirect(url_for("athletes.athletes_list", organization=name))
 
     @app.route("/settings", methods=["GET", "POST"])

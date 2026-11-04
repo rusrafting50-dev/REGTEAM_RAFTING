@@ -10,7 +10,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">Сборная команда</a>
+            <a class="navbar-brand" href="{{ url_for('index') }}">Спортсмены и специалисты</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -42,13 +42,18 @@
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-                            Организация
+                            {{ current_organization.name if current_organization else 'Сборная команда' }}
                         </a>
                         <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item {{ 'active' if not current_organization }}"
+                                   href="{{ url_for('organizations_clear') }}">Сборная команда</a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
                             {% for organization in current_subject_organizations %}
                             <li>
-                                <a class="dropdown-item"
-                                   href="{{ url_for('athletes.athletes_list', organization=organization.name) }}">{{ organization.name }}</a>
+                                <a class="dropdown-item {{ 'active' if current_organization and organization.id == current_organization.id }}"
+                                   href="{{ url_for('organizations_switch', organization_id=organization.id) }}">{{ organization.name }}</a>
                             </li>
                             {% else %}
                             <li><span class="dropdown-item-text text-muted">Организации ещё не добавлены</span></li>
