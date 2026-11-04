@@ -6,7 +6,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 
 import references
 from models import Athlete, ChangeLog, db
-from organizations import субъект_по_организации
+from organizations import субъект_по_организации, текущая_организация
 from subjects import текущий_субъект_id
 from sync_to_rafting_cfo import отправить_всех, отправить_спортсмена, удалить_спортсмена
 
@@ -86,6 +86,18 @@ def _apply_common_filters(query):
     return query, filters
 
 
+def _scope_to_organization(query):
+    """Сужает запрос до текущей выбранной в шапке организации (сессия,
+    organizations.py) — применяется ко ВСЕМ списочным страницам
+    (главный список, страницы возрастных категорий, тренеры), чтобы
+    выбор организации оставался «приклеенным» при переходах между ними
+    по кнопкам, а не только на том же экране, где её выбрали."""
+    organization = текущая_организация()
+    if organization:
+        query = query.filter(Athlete.organization == organization.name)
+    return query
+
+
 def _with_current_value(options, current_value):
     """Список options, дополненный current_value, если его там ещё нет (чтобы не потерять при сохранении)."""
     if current_value and current_value not in options:
@@ -146,13 +158,16 @@ def _render_athletes_list(
 
 @bp.route("/")
 def athletes_list():
+    organization = текущая_организация()
     query = Athlete.query.filter_by(is_active=True, subject_id=текущий_субъект_id())
+    query = _scope_to_organization(query)
     list_buttons = TEAM_AGE_CATEGORY_TYPES + [
         ("", "Тренеры", "athletes.athletes_trainers_list", [], "Тренеры"),
     ]
+    heading = f"Спортсмены и специалисты: {organization.name}" if organization else "Список сборной команды"
     return _render_athletes_list(
         query, list_buttons=list_buttons,
-        heading="Список сборной команды",
+        heading=heading,
         show_add_button=False, highlight_active=False,
     )
 
@@ -163,6 +178,7 @@ def athletes_trainers_list():
         Athlete.subject_id == текущий_субъект_id(),
         Athlete.category.op("REGEXP")(TRAINER_CATEGORY_PATTERN),
     )
+    query = _scope_to_organization(query)
     return _render_athletes_list(
         query, heading="Тренеры",
         add_button_label="Добавить тренера", add_form_variant="trainer",
@@ -176,6 +192,7 @@ def _make_age_category_view(age_categories, heading):
             Athlete.subject_id == текущий_субъект_id(),
             Athlete.age_category.in_(age_categories),
         )
+        query = _scope_to_organization(query)
         return _render_athletes_list(
             query, heading=heading, show_add_button=False,
             age_category_filter_options=age_categories,

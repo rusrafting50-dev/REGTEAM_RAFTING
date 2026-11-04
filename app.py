@@ -131,12 +131,12 @@ def create_app():
     def organizations_switch(organization_id):
         organization = Organization.query.get_or_404(organization_id)
         session["organization_id"] = organization.id
-        return redirect(url_for("athletes.athletes_list", organization=organization.name))
+        return redirect(url_for("athletes.athletes_list"))
 
     @app.route("/organizations/clear")
     def organizations_clear():
         session.pop("organization_id", None)
-        return redirect(url_for("athletes.athletes_list"))
+        return redirect(request.referrer or url_for("athletes.athletes_list"))
 
     @app.route("/organizations", methods=["POST"])
     def organizations_add():
@@ -153,7 +153,7 @@ def create_app():
         db.session.commit()
         flash(f"Организация «{name}» добавлена", "success")
         session["organization_id"] = organization.id
-        return redirect(url_for("athletes.athletes_list", organization=name))
+        return redirect(url_for("athletes.athletes_list"))
 
     @app.route("/settings", methods=["GET", "POST"])
     def settings():
