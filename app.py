@@ -9,7 +9,7 @@ from markupsafe import Markup, escape
 from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import Engine
 
-from models import Athlete, ListChangeRecord, Organization, ReportSettings, Subject, db
+from models import ListChangeRecord, Organization, ReportSettings, Subject, db
 from organizations import организации_субъекта, текущая_организация
 from routes.api import bp as api_bp
 from routes.athletes import bp as athletes_bp
@@ -69,21 +69,6 @@ def _sync_missing_columns():
                 conn.commit()
 
 
-def _активировать_зависших_спортсменов():
-    """Одноразовая (идемпотентная) починка: до исправления дефолта
-    Athlete.is_active (models.py) спортсмены, добавленные вручную через
-    форму, создавались неактивными и не попадали в «Список сборной
-    команды». От ПРЕДНАМЕРЕННО исключённых (кнопка «Не аттестован») их
-    отличает отсутствие записей в истории (ChangeLog) — настоящее
-    исключение всегда оставляет запись «исключён». После первого запуска
-    подходящих записей уже не останется — запрос станет no-op."""
-    stuck = Athlete.query.filter_by(is_active=False).filter(~Athlete.change_logs.any()).all()
-    for athlete in stuck:
-        athlete.is_active = True
-    if stuck:
-        db.session.commit()
-
-
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = "dev-secret-key"
@@ -104,7 +89,6 @@ def create_app():
         db.create_all()
         _sync_missing_columns()
         обеспечить_субъекты()
-        _активировать_зависших_спортсменов()
 
     @app.context_processor
     def inject_subjects():

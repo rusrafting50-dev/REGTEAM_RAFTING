@@ -169,13 +169,20 @@ def _render_athletes_list(
 @bp.route("/")
 def athletes_list():
     organization = текущая_организация()
-    query = Athlete.query.filter_by(is_active=True, subject_id=текущий_субъект_id())
-    query = _scope_to_organization(query)
+    query = Athlete.query.filter_by(subject_id=текущий_субъект_id())
+    if organization:
+        # Страница клуба — все его спортсмены, а не только уже включённые
+        # в сборную (is_active): новый спортсмен сначала просто числится
+        # за клубом, включение в сборную — отдельное действие.
+        query = _scope_to_organization(query)
+    else:
+        # Общая «Список сборной команды» — только официально включённые.
+        query = query.filter_by(is_active=True)
     heading = f"Спортсмены и специалисты: {organization.name}" if organization else "Список сборной команды"
     return _render_athletes_list(
         query, list_buttons=LIST_BUTTONS,
         heading=heading,
-        show_add_button=False, highlight_active=False,
+        show_add_button=False, highlight_active=True,
     )
 
 
