@@ -1,5 +1,81 @@
 {% extends "base.html" %}
 {% block title %}{{ athlete.full_name }} — Сборная команда{% endblock %}
+
+{% macro crud_table(prefix, heading, records, columns, add_action) %}
+<h2 class="h5 mt-4 mb-2">{{ heading }}</h2>
+{% if records %}
+<div style="overflow-x: auto;">
+<table class="table table-sm table-bordered">
+    <thead>
+        <tr>
+            {% for col in columns %}<th>{{ col.label }}</th>{% endfor %}
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in records %}
+        <tr id="{{ prefix }}-view-{{ record.id }}">
+            {% for col in columns %}
+            <td>{% if col.type == 'date' %}{{ record[col.field].strftime('%d.%m.%Y') if record[col.field] else '' }}{% else %}{{ record[col.field] or '' }}{% endif %}</td>
+            {% endfor %}
+            <td class="text-nowrap">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('{{ prefix }}-view-{{ record.id }}').classList.add('d-none'); document.getElementById('{{ prefix }}-edit-{{ record.id }}').classList.remove('d-none');">Изменить</button>
+                <form method="post" action="{{ url_for('athletes.' ~ prefix ~ '_delete', record_id=record.id) }}" class="d-inline" onsubmit="return confirm('Удалить эту запись?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        <tr id="{{ prefix }}-edit-{{ record.id }}" class="d-none">
+            <td colspan="{{ columns|length + 1 }}">
+                <form method="post" action="{{ url_for('athletes.' ~ prefix ~ '_edit', record_id=record.id) }}" class="d-flex flex-wrap align-items-end gap-2">
+                    {% for col in columns %}
+                    <div>
+                        <label class="form-label mb-0">{{ col.label }}</label>
+                        {% if col.type == 'select' %}
+                        <select name="{{ col.field }}" class="form-select form-select-sm">
+                            <option value="">—</option>
+                            {% for opt in col.options %}<option value="{{ opt }}" {% if record[col.field] == opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}
+                        </select>
+                        {% elif col.type == 'date' %}
+                        <input type="date" name="{{ col.field }}" class="form-control form-control-sm" value="{{ record[col.field].isoformat() if record[col.field] else '' }}">
+                        {% else %}
+                        <input type="text" name="{{ col.field }}" class="form-control form-control-sm" value="{{ record[col.field] or '' }}">
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-sm btn-primary">Сохранить изменения</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('{{ prefix }}-edit-{{ record.id }}').classList.add('d-none'); document.getElementById('{{ prefix }}-view-{{ record.id }}').classList.remove('d-none');">Отмена</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<p class="text-muted">Записей пока нет</p>
+{% endif %}
+
+<form method="post" action="{{ add_action }}" class="d-flex flex-wrap align-items-end gap-2 mb-4">
+    {% for col in columns %}
+    <div>
+        <label class="form-label mb-0">{{ col.label }}</label>
+        {% if col.type == 'select' %}
+        <select name="{{ col.field }}" class="form-select form-select-sm">
+            <option value="">—</option>
+            {% for opt in col.options %}<option value="{{ opt }}">{{ opt }}</option>{% endfor %}
+        </select>
+        {% elif col.type == 'date' %}
+        <input type="date" name="{{ col.field }}" class="form-control form-control-sm">
+        {% else %}
+        <input type="text" name="{{ col.field }}" class="form-control form-control-sm">
+        {% endif %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-sm btn-outline-primary">Добавить запись</button>
+</form>
+{% endmacro %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h3 mb-0">{{ athlete.full_name }}</h1>
@@ -105,6 +181,89 @@
         {% endif %}
     </div>
 </div>
+
+<hr class="my-4">
+<h1 class="h4 mb-3">Разрядная книжка спортсмена</h1>
+
+<h2 class="h5 mb-2">Основные антропометрические данные</h2>
+<form method="post" action="{{ url_for('athletes.anthropometry_save', athlete_id=athlete.id) }}">
+<div style="overflow-x: auto;">
+<table class="table table-sm table-bordered w-auto">
+    <thead>
+        <tr>
+            <th></th>
+            {% for col in range(1, 6) %}
+            <th><input type="text" name="header_{{ col }}" class="form-control form-control-sm" value="{{ anthropometry_headers[col - 1] }}" placeholder="202_" style="width: 6em;"></th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for i, metric, values in anthropometry_rows %}
+        <tr>
+            <th class="text-nowrap">{{ metric }}</th>
+            {% for col in range(1, 6) %}
+            <td><input type="text" name="value_{{ i }}_{{ col }}" class="form-control form-control-sm" value="{{ values[col - 1] }}" style="width: 6em;"></td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+<div class="mb-2" style="max-width: 600px;">
+    <label class="form-label">Замечания врача</label>
+    <textarea name="doctor_notes" class="form-control" rows="2">{{ athlete.doctor_notes or '' }}</textarea>
+</div>
+<button type="submit" class="btn btn-sm btn-primary mb-4">Сохранить</button>
+</form>
+
+{{ crud_table('medical_clearances', 'Разрешение врача на участия в соревнованиях', athlete.medical_clearances,
+    [{'field': 'date', 'label': 'Дата', 'type': 'date'},
+     {'field': 'valid_until', 'label': 'Действительно до', 'type': 'date'},
+     {'field': 'doctor_name', 'label': 'ФИО врача', 'type': 'text'}],
+    url_for('athletes.medical_clearances_add', athlete_id=athlete.id)) }}
+
+{{ crud_table('transfer_records', 'Отметки о переходе в другую спортивную организацию', athlete.transfer_records,
+    [{'field': 'left_organization', 'label': 'Снят с учета в коллективе физкультуры', 'type': 'text'},
+     {'field': 'joined_organization', 'label': 'Принят на учет в коллективе физкультуры', 'type': 'text'}],
+    url_for('athletes.transfer_records_add', athlete_id=athlete.id)) }}
+
+{{ crud_table('penalties', 'Взыскания', athlete.penalties,
+    [{'field': 'date', 'label': 'Дата', 'type': 'date'},
+     {'field': 'description', 'label': 'Характер взыскания', 'type': 'text'},
+     {'field': 'responsible_person', 'label': 'Ответственное лицо', 'type': 'text'}],
+    url_for('athletes.penalties_add', athlete_id=athlete.id)) }}
+
+{{ crud_table('gto_records', 'Сдача норм ГТО', athlete.gto_records,
+    [{'field': 'date', 'label': 'Дата', 'type': 'date'},
+     {'field': 'result', 'label': 'Результат', 'type': 'text'},
+     {'field': 'responsible_person', 'label': 'Ответственное лицо', 'type': 'text'}],
+    url_for('athletes.gto_records_add', athlete_id=athlete.id)) }}
+
+{{ crud_table('norm_fulfillments', 'Выполнение норм', athlete.norm_fulfillments,
+    [{'field': 'requirement_level', 'label': 'Выполнение требований (норм)', 'type': 'select', 'options': references.NORM_FULFILLMENT_LEVELS},
+     {'field': 'date', 'label': 'Дата', 'type': 'date'},
+     {'field': 'result', 'label': 'Результат', 'type': 'text'},
+     {'field': 'responsible_person', 'label': 'Ответственное лицо', 'type': 'text'}],
+    url_for('athletes.norm_fulfillments_add', athlete_id=athlete.id)) }}
+
+{{ crud_table('yearly_summaries', 'Итоговые данные об участии в соревнованиях', athlete.yearly_summaries,
+    [{'field': 'year', 'label': 'Год', 'type': 'text'},
+     {'field': 'competitions_count', 'label': 'Количество соревнований', 'type': 'text'},
+     {'field': 'best_result', 'label': 'Лучший результат', 'type': 'text'}],
+    url_for('athletes.yearly_summaries_add', athlete_id=athlete.id)) }}
+
+{{ crud_table('awards', 'Награждения', athlete.awards,
+    [{'field': 'date', 'label': 'Дата', 'type': 'date'},
+     {'field': 'reason', 'label': 'За что награжден', 'type': 'text'},
+     {'field': 'awarded_by', 'label': 'Кем и чем награжден', 'type': 'text'}],
+    url_for('athletes.awards_add', athlete_id=athlete.id)) }}
+
+{{ crud_table('competition_participations', 'Данные об участии в соревнованиях', athlete.competition_participations,
+    [{'field': 'date', 'label': 'Дата', 'type': 'date'},
+     {'field': 'competition_name', 'label': 'Наименование соревнований', 'type': 'text'},
+     {'field': 'result', 'label': 'Результат', 'type': 'text'},
+     {'field': 'responsible_person', 'label': 'Ответственное лицо', 'type': 'text'}],
+    url_for('athletes.competition_participations_add', athlete_id=athlete.id)) }}
 
 <a href="{{ url_for('athletes.athletes_list') }}" class="btn btn-outline-secondary">Назад к списку</a>
 {% endblock %}

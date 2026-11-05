@@ -53,6 +53,7 @@ class Athlete(db.Model):
     organization = db.Column(db.String(300))
     territory = db.Column(db.String(100))
     trainer = db.Column(db.String(200))
+    doctor_notes = db.Column(db.Text)
 
     result_regional = db.Column(db.String(100))
     result_national = db.Column(db.String(100))
@@ -67,6 +68,42 @@ class Athlete(db.Model):
 
     change_logs = db.relationship(
         "ChangeLog", backref="athlete", lazy=True, order_by="ChangeLog.change_date.desc()",
+        cascade="all, delete-orphan",
+    )
+    medical_clearances = db.relationship(
+        "MedicalClearance", backref="athlete", lazy=True, order_by="MedicalClearance.id",
+        cascade="all, delete-orphan",
+    )
+    anthropometry_records = db.relationship(
+        "AnthropometryRecord", backref="athlete", lazy=True, order_by="AnthropometryRecord.id",
+        cascade="all, delete-orphan",
+    )
+    transfer_records = db.relationship(
+        "TransferRecord", backref="athlete", lazy=True, order_by="TransferRecord.id",
+        cascade="all, delete-orphan",
+    )
+    penalties = db.relationship(
+        "Penalty", backref="athlete", lazy=True, order_by="Penalty.id",
+        cascade="all, delete-orphan",
+    )
+    gto_records = db.relationship(
+        "GtoRecord", backref="athlete", lazy=True, order_by="GtoRecord.id",
+        cascade="all, delete-orphan",
+    )
+    norm_fulfillments = db.relationship(
+        "NormFulfillment", backref="athlete", lazy=True, order_by="NormFulfillment.id",
+        cascade="all, delete-orphan",
+    )
+    yearly_summaries = db.relationship(
+        "YearlySummary", backref="athlete", lazy=True, order_by="YearlySummary.id",
+        cascade="all, delete-orphan",
+    )
+    awards = db.relationship(
+        "Award", backref="athlete", lazy=True, order_by="Award.id",
+        cascade="all, delete-orphan",
+    )
+    competition_participations = db.relationship(
+        "CompetitionParticipation", backref="athlete", lazy=True, order_by="CompetitionParticipation.id",
         cascade="all, delete-orphan",
     )
 
@@ -109,3 +146,115 @@ class ListChangeRecord(db.Model):
     subject_id = db.Column(db.Integer, db.ForeignKey("subject.id"), nullable=False)
     number = db.Column(db.String(50), nullable=False)
     date = db.Column(db.Date, nullable=False)
+
+
+# --- Разделы разрядной книжки спортсмена -----------------------------------
+
+class MedicalClearance(db.Model):
+    """Разрешение врача на участие в соревнованиях."""
+    __tablename__ = "athlete_medical_clearance"
+
+    id = db.Column(db.Integer, primary_key=True)
+    athlete_id = db.Column(db.Integer, db.ForeignKey("athlete.id"), nullable=False)
+
+    date = db.Column(db.Date)
+    valid_until = db.Column(db.Date)
+    doctor_name = db.Column(db.String(200))
+
+
+class AnthropometryRecord(db.Model):
+    """Основные антропометрические данные — сетка показатель × год."""
+    __tablename__ = "athlete_anthropometry"
+
+    id = db.Column(db.Integer, primary_key=True)
+    athlete_id = db.Column(db.Integer, db.ForeignKey("athlete.id"), nullable=False)
+
+    metric = db.Column(db.String(100), nullable=False)
+    column_index = db.Column(db.Integer, nullable=False)
+    year_label = db.Column(db.String(20))
+    value = db.Column(db.String(50))
+
+
+class TransferRecord(db.Model):
+    """Отметки о переходе в другую спортивную организацию."""
+    __tablename__ = "athlete_transfer_record"
+
+    id = db.Column(db.Integer, primary_key=True)
+    athlete_id = db.Column(db.Integer, db.ForeignKey("athlete.id"), nullable=False)
+
+    left_organization = db.Column(db.String(300))
+    joined_organization = db.Column(db.String(300))
+
+
+class Penalty(db.Model):
+    """Взыскания."""
+    __tablename__ = "athlete_penalty"
+
+    id = db.Column(db.Integer, primary_key=True)
+    athlete_id = db.Column(db.Integer, db.ForeignKey("athlete.id"), nullable=False)
+
+    date = db.Column(db.Date)
+    description = db.Column(db.String(300))
+    responsible_person = db.Column(db.String(200))
+
+
+class GtoRecord(db.Model):
+    """Сдача норм ГТО."""
+    __tablename__ = "athlete_gto_record"
+
+    id = db.Column(db.Integer, primary_key=True)
+    athlete_id = db.Column(db.Integer, db.ForeignKey("athlete.id"), nullable=False)
+
+    date = db.Column(db.Date)
+    result = db.Column(db.String(200))
+    responsible_person = db.Column(db.String(200))
+
+
+class NormFulfillment(db.Model):
+    """Выполнение норм спортивного разряда/звания."""
+    __tablename__ = "athlete_norm_fulfillment"
+
+    id = db.Column(db.Integer, primary_key=True)
+    athlete_id = db.Column(db.Integer, db.ForeignKey("athlete.id"), nullable=False)
+
+    requirement_level = db.Column(db.String(200))
+    date = db.Column(db.Date)
+    result = db.Column(db.String(200))
+    responsible_person = db.Column(db.String(200))
+
+
+class YearlySummary(db.Model):
+    """Итоговые данные об участии в соревнованиях (по годам)."""
+    __tablename__ = "athlete_yearly_summary"
+
+    id = db.Column(db.Integer, primary_key=True)
+    athlete_id = db.Column(db.Integer, db.ForeignKey("athlete.id"), nullable=False)
+
+    year = db.Column(db.String(20))
+    competitions_count = db.Column(db.String(50))
+    best_result = db.Column(db.String(200))
+
+
+class Award(db.Model):
+    """Награждения."""
+    __tablename__ = "athlete_award"
+
+    id = db.Column(db.Integer, primary_key=True)
+    athlete_id = db.Column(db.Integer, db.ForeignKey("athlete.id"), nullable=False)
+
+    date = db.Column(db.Date)
+    reason = db.Column(db.String(300))
+    awarded_by = db.Column(db.String(300))
+
+
+class CompetitionParticipation(db.Model):
+    """Данные об участии в соревнованиях."""
+    __tablename__ = "athlete_competition_participation"
+
+    id = db.Column(db.Integer, primary_key=True)
+    athlete_id = db.Column(db.Integer, db.ForeignKey("athlete.id"), nullable=False)
+
+    date = db.Column(db.Date)
+    competition_name = db.Column(db.String(300))
+    result = db.Column(db.String(200))
+    responsible_person = db.Column(db.String(200))

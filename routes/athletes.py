@@ -5,7 +5,10 @@ from datetime import date, datetime
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
 import references
-from models import Athlete, ChangeLog, db
+from models import (
+    Athlete, AnthropometryRecord, Award, ChangeLog, CompetitionParticipation, GtoRecord,
+    MedicalClearance, NormFulfillment, Penalty, TransferRecord, YearlySummary, db,
+)
 from organizations import субъект_по_организации, текущая_организация
 from subjects import текущий_субъект_id
 from sync_to_rafting_cfo import отправить_всех, отправить_спортсмена, удалить_спортсмена
@@ -259,7 +262,25 @@ def athletes_new():
 def athletes_detail(athlete_id):
     athlete = _get_athlete_or_404(athlete_id)
     organization_subject = субъект_по_организации(athlete.organization, athlete.subject_id)
-    return render_template("athletes/detail.html", athlete=athlete, organization_subject=organization_subject)
+
+    records_by_cell = {(r.metric, r.column_index): r for r in athlete.anthropometry_records}
+    anthropometry_headers = [""] * 5
+    for r in athlete.anthropometry_records:
+        if r.year_label and 1 <= r.column_index <= 5:
+            anthropometry_headers[r.column_index - 1] = r.year_label
+    anthropometry_rows = []
+    for i, metric in enumerate(references.ANTHROPOMETRY_METRICS):
+        values = [
+            (records_by_cell[(metric, col)].value or "") if (metric, col) in records_by_cell else ""
+            for col in range(1, 6)
+        ]
+        anthropometry_rows.append((i, metric, values))
+
+    return render_template(
+        "athletes/detail.html", athlete=athlete, organization_subject=organization_subject,
+        references=references,
+        anthropometry_headers=anthropometry_headers, anthropometry_rows=anthropometry_rows,
+    )
 
 
 @bp.route("/<int:athlete_id>/edit", methods=["GET", "POST"])
@@ -380,6 +401,111 @@ def change_log_delete(log_id):
     db.session.commit()
     flash("Запись о членстве в сборной команде удалена", "success")
     return redirect(url_for("athletes.athletes_detail", athlete_id=athlete_id))
+
+
+def _register_athlete_subtable_routes(model, slug, field_types, label):
+    """Регистрирует POST-маршруты добавления/изменения/удаления записи простой
+    CRUD-таблицы раздела разрядной книжки (одинаковой структуры для разных разделов)."""
+
+    def _apply_fields(record, form):
+        for name, kind in field_types.items():
+            raw = form.get(name, "").strip()
+            if kind == "date":
+                setattr(record, name, datetime.strptime(raw, "%Y-%m-%d").date() if raw else None)
+            else:
+                setattr(record, name, raw or None)
+
+    def add_view(athlete_id):
+        athlete = _get_athlete_or_404(athlete_id)
+        record = model(athlete_id=athlete.id)
+        _apply_fields(record, request.form)
+        db.session.add(record)
+        db.session.commit()
+        flash(f"{label}: запись добавлена", "success")
+        return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
+
+    def edit_view(record_id):
+        record = model.query.get_or_404(record_id)
+        if record.athlete.subject_id != текущий_субъект_id():
+            abort(404)
+        _apply_fields(record, request.form)
+        db.session.commit()
+        flash(f"{label}: запись обновлена", "success")
+        return redirect(url_for("athletes.athletes_detail", athlete_id=record.athlete_id))
+
+    def delete_view(record_id):
+        record = model.query.get_or_404(record_id)
+        if record.athlete.subject_id != текущий_субъект_id():
+            abort(404)
+        athlete_id = record.athlete_id
+        db.session.delete(record)
+        db.session.commit()
+        flash(f"{label}: запись удалена", "success")
+        return redirect(url_for("athletes.athletes_detail", athlete_id=athlete_id))
+
+    bp.add_url_rule(f"/<int:athlete_id>/{slug}", endpoint=f"{slug}_add", view_func=add_view, methods=["POST"])
+    bp.add_url_rule(f"/{slug}/<int:record_id>/edit", endpoint=f"{slug}_edit", view_func=edit_view, methods=["POST"])
+    bp.add_url_rule(f"/{slug}/<int:record_id>/delete", endpoint=f"{slug}_delete", view_func=delete_view, methods=["POST"])
+
+
+_register_athlete_subtable_routes(
+    MedicalClearance, "medical_clearances",
+    {"date": "date", "valid_until": "date", "doctor_name": "text"},
+    "Разрешение врача",
+)
+_register_athlete_subtable_routes(
+    TransferRecord, "transfer_records",
+    {"left_organization": "text", "joined_organization": "text"},
+    "Отметка о переходе",
+)
+_register_athlete_subtable_routes(
+    Penalty, "penalties",
+    {"date": "date", "description": "text", "responsible_person": "text"},
+    "Взыскание",
+)
+_register_athlete_subtable_routes(
+    GtoRecord, "gto_records",
+    {"date": "date", "result": "text", "responsible_person": "text"},
+    "Сдача норм ГТО",
+)
+_register_athlete_subtable_routes(
+    NormFulfillment, "norm_fulfillments",
+    {"requirement_level": "text", "date": "date", "result": "text", "responsible_person": "text"},
+    "Выполнение норм",
+)
+_register_athlete_subtable_routes(
+    YearlySummary, "yearly_summaries",
+    {"year": "text", "competitions_count": "text", "best_result": "text"},
+    "Итоговые данные об участии в соревнованиях",
+)
+_register_athlete_subtable_routes(
+    Award, "awards",
+    {"date": "date", "reason": "text", "awarded_by": "text"},
+    "Награждение",
+)
+_register_athlete_subtable_routes(
+    CompetitionParticipation, "competition_participations",
+    {"date": "date", "competition_name": "text", "result": "text", "responsible_person": "text"},
+    "Данные об участии в соревнованиях",
+)
+
+
+@bp.route("/<int:athlete_id>/anthropometry", methods=["POST"])
+def anthropometry_save(athlete_id):
+    athlete = _get_athlete_or_404(athlete_id)
+    AnthropometryRecord.query.filter_by(athlete_id=athlete.id).delete()
+    headers = [request.form.get(f"header_{col}", "").strip() for col in range(1, 6)]
+    for i, metric in enumerate(references.ANTHROPOMETRY_METRICS):
+        for col in range(1, 6):
+            value = request.form.get(f"value_{i}_{col}", "").strip()
+            db.session.add(AnthropometryRecord(
+                athlete_id=athlete.id, metric=metric, column_index=col,
+                year_label=headers[col - 1] or None, value=value or None,
+            ))
+    athlete.doctor_notes = request.form.get("doctor_notes", "").strip() or None
+    db.session.commit()
+    flash("Антропометрические данные сохранены", "success")
+    return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
 
 def _fill_athlete_from_form(athlete, form):
