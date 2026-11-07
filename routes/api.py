@@ -11,6 +11,7 @@ from functools import wraps
 from flask import Blueprint, jsonify, request
 
 from models import Athlete, CompetitionParticipation, Subject, db
+from subjects import текущий_субъект_id
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -88,6 +89,8 @@ def competition_import():
     matched = 0
     created = 0
     participations_created = 0
+    conflicts = 0
+    home_subject_id = текущий_субъект_id()
 
     for a in athletes_data:
         last_name  = (a.get("last_name")  or "").strip()
@@ -131,18 +134,20 @@ def competition_import():
             created += 1
         else:
             matched += 1
-            # Импортированный ранее спортсмен (is_imported=True): субъект мог быть
-            # записан неверно (COREZ-субъект вместо субъекта команды). Переводим
-            # обратно в «На рассмотрении» — при нажатии «Включить» subject_id
-            # выставится корректно, после чего is_imported сбросится в False и
-            # спортсмен больше не будет повторно попадать в pending.
-            if athlete.is_imported and not athlete.imported_pending:
-                athlete.imported_pending = True
-                athlete.in_list = False   # сбрасываем: будет переприсвоен при «Включить»
-            elif not athlete.in_list and not athlete.imported_pending:
-                # Не-импортированный спортсмен, ранее не числившийся в списке
-                athlete.imported_pending = True
-                athlete.is_imported = True
+            if not athlete.imported_pending:
+                needs_requeue = (
+                    bool(athlete.is_imported)                     # создан предыдущим COREZ-импортом
+                    or not athlete.in_list                        # не числится ни в одном списке
+                    or athlete.subject_id != home_subject_id      # числится в другом регионе
+                )
+                if needs_requeue:
+                    athlete.imported_pending = True
+                    # in_list НЕ сбрасываем: спортсмен может быть активным членом
+                    # другой региональной сборной — исключать его решает пользователь
+                    if not athlete.in_list:
+                        athlete.is_imported = True
+                    if athlete.subject_id != home_subject_id and athlete.in_list:
+                        conflicts += 1
 
         exists = CompetitionParticipation.query.filter_by(
             athlete_id=athlete.id,
@@ -161,6 +166,7 @@ def competition_import():
         "matched": matched,
         "created": created,
         "participations_created": participations_created,
+        "conflicts": conflicts,
     })
 
 

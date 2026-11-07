@@ -203,6 +203,7 @@ def athletes_pending():
         list_buttons=None,
         pending_count=0,
         show_activate_button=True,
+        current_subject_id=текущий_субъект_id(),
     )
 
 
