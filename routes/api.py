@@ -5,11 +5,12 @@
 # номер_в_базе — чтобы его JS не пришлось переписывать. Защищено заголовком
 # X-API-Key (значение — в .env, API_KEY).
 import os
+from datetime import date
 from functools import wraps
 
 from flask import Blueprint, jsonify, request
 
-from models import Athlete, db
+from models import Athlete, CompetitionParticipation, db
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -42,6 +43,83 @@ def _athlete_to_corez_dict(athlete):
         "разряд": _RANK_TO_COREZ.get(athlete.rank, athlete.rank) or "",
         "номер_в_базе": athlete.id,
     }
+
+
+@bp.route("/competition/import", methods=["POST"])
+@require_api_key
+def competition_import():
+    """Принимает список участников из предварительной заявки COREZ
+    и записывает CompetitionParticipation для найденных в базе спортсменов.
+
+    Тело запроса (JSON):
+      competition_name  — название соревнования
+      competition_date  — дата в ISO-формате (опционально, иначе null)
+      athletes          — [{last_name, first_name, middle_name,
+                            birth_date (ISO), gender, rank}, …]
+
+    Ответ: {matched, unmatched, participations_created}
+    """
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Ожидается JSON."}), 400
+
+    competition_name = (data.get("competition_name") or "").strip()
+    competition_date_str = (data.get("competition_date") or "").strip()
+    athletes_data = data.get("athletes") or []
+
+    try:
+        competition_date = date.fromisoformat(competition_date_str) if competition_date_str else None
+    except ValueError:
+        competition_date = None
+
+    matched = 0
+    unmatched = 0
+    participations_created = 0
+
+    for a in athletes_data:
+        last_name  = (a.get("last_name")  or "").strip()
+        first_name = (a.get("first_name") or "").strip()
+        birth_date_str = (a.get("birth_date") or "").strip()
+
+        if not last_name and not first_name:
+            continue
+
+        try:
+            birth_date = date.fromisoformat(birth_date_str) if birth_date_str else None
+        except ValueError:
+            birth_date = None
+
+        q = Athlete.query.filter(
+            Athlete.last_name.ilike(last_name),
+            Athlete.first_name.ilike(first_name),
+        )
+        if birth_date:
+            q = q.filter(Athlete.birth_date == birth_date)
+        athlete = q.first()
+
+        if athlete:
+            matched += 1
+            exists = CompetitionParticipation.query.filter_by(
+                athlete_id=athlete.id,
+                competition_name=competition_name,
+            ).first()
+            if not exists:
+                p = CompetitionParticipation(
+                    athlete_id=athlete.id,
+                    competition_name=competition_name,
+                    date=competition_date,
+                )
+                db.session.add(p)
+                participations_created += 1
+        else:
+            unmatched += 1
+
+    db.session.commit()
+    return jsonify({
+        "matched": matched,
+        "unmatched": unmatched,
+        "participations_created": participations_created,
+    })
 
 
 @bp.route("/athletes/search", methods=["GET"])
