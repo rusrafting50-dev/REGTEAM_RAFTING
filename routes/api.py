@@ -10,7 +10,7 @@ from functools import wraps
 
 from flask import Blueprint, jsonify, request
 
-from models import Athlete, CompetitionParticipation, db
+from models import Athlete, CompetitionParticipation, Subject, db
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -18,6 +18,18 @@ bp = Blueprint("api", __name__, url_prefix="/api")
 # GENDERS, RANKS), COREZ — короткими кодами ('м'/'ж', 'Iю'/'IIю'/'IIIю').
 _GENDER_TO_SHORT = {"Мужской": "м", "Женский": "ж"}
 _RANK_TO_COREZ = {"I юн": "Iю", "II юн": "IIю", "III юн": "IIIю"}
+_GENDER_FROM_COREZ = {"м": "Мужской", "ж": "Женский"}
+_RANK_FROM_COREZ = {"Iю": "I юн", "IIю": "II юн", "IIIю": "III юн"}
+
+
+def _get_or_create_subject(name):
+    name = (name or "Московская область").strip()
+    s = Subject.query.filter_by(name=name).first()
+    if not s:
+        s = Subject(name=name)
+        db.session.add(s)
+        db.session.flush()
+    return s
 
 
 def require_api_key(view):
@@ -48,16 +60,17 @@ def _athlete_to_corez_dict(athlete):
 @bp.route("/competition/import", methods=["POST"])
 @require_api_key
 def competition_import():
-    """Принимает список участников из предварительной заявки COREZ
-    и записывает CompetitionParticipation для найденных в базе спортсменов.
+    """Принимает список участников из предварительной заявки COREZ.
+    Найденным в базе спортсменам добавляет CompetitionParticipation;
+    не найденным — создаёт новую запись Athlete (is_active=False).
 
     Тело запроса (JSON):
       competition_name  — название соревнования
       competition_date  — дата в ISO-формате (опционально, иначе null)
       athletes          — [{last_name, first_name, middle_name,
-                            birth_date (ISO), gender, rank}, …]
+                            birth_date (ISO), gender, rank, subject}, …]
 
-    Ответ: {matched, unmatched, participations_created}
+    Ответ: {matched, created, participations_created}
     """
     data = request.get_json(silent=True)
     if not data:
@@ -73,7 +86,7 @@ def competition_import():
         competition_date = None
 
     matched = 0
-    unmatched = 0
+    created = 0
     participations_created = 0
 
     for a in athletes_data:
@@ -97,27 +110,42 @@ def competition_import():
             q = q.filter(Athlete.birth_date == birth_date)
         athlete = q.first()
 
-        if athlete:
+        if not athlete:
+            subject = _get_or_create_subject(a.get("subject") or "")
+            gender_raw = (a.get("gender") or "").strip()
+            rank_raw   = (a.get("rank")   or "").strip()
+            athlete = Athlete(
+                last_name   = last_name,
+                first_name  = first_name,
+                middle_name = (a.get("middle_name") or "").strip(),
+                birth_date  = birth_date,
+                gender      = _GENDER_FROM_COREZ.get(gender_raw, gender_raw),
+                rank        = _RANK_FROM_COREZ.get(rank_raw, rank_raw),
+                subject_id  = subject.id,
+                is_active   = False,
+            )
+            db.session.add(athlete)
+            db.session.flush()
+            created += 1
+        else:
             matched += 1
-            exists = CompetitionParticipation.query.filter_by(
+
+        exists = CompetitionParticipation.query.filter_by(
+            athlete_id=athlete.id,
+            competition_name=competition_name,
+        ).first()
+        if not exists:
+            db.session.add(CompetitionParticipation(
                 athlete_id=athlete.id,
                 competition_name=competition_name,
-            ).first()
-            if not exists:
-                p = CompetitionParticipation(
-                    athlete_id=athlete.id,
-                    competition_name=competition_name,
-                    date=competition_date,
-                )
-                db.session.add(p)
-                participations_created += 1
-        else:
-            unmatched += 1
+                date=competition_date,
+            ))
+            participations_created += 1
 
     db.session.commit()
     return jsonify({
         "matched": matched,
-        "unmatched": unmatched,
+        "created": created,
         "participations_created": participations_created,
     })
 
