@@ -9,7 +9,7 @@ from markupsafe import Markup, escape
 from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import Engine
 
-from models import ListChangeRecord, Organization, ReportSettings, Subject, db
+from models import Athlete, ListChangeRecord, Organization, ReportSettings, Subject, db
 from organizations import организации_субъекта, текущая_организация
 from routes.api import bp as api_bp
 from routes.athletes import bp as athletes_bp
@@ -69,6 +69,16 @@ def _sync_missing_columns():
                 conn.commit()
 
 
+def _backfill_in_list():
+    """Ставит in_list=True всем спортсменам, у которых in_list=False
+    но is_active=True (колонка добавлена позже — у старых записей False)."""
+    db.session.query(Athlete).filter(
+        Athlete.is_active == True,
+        Athlete.in_list == False,
+    ).update({"in_list": True}, synchronize_session=False)
+    db.session.commit()
+
+
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = "dev-secret-key"
@@ -89,6 +99,7 @@ def create_app():
         db.create_all()
         _sync_missing_columns()
         обеспечить_субъекты()
+        _backfill_in_list()
 
     @app.context_processor
     def inject_subjects():
