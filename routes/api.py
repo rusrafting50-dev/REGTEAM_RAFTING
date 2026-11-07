@@ -131,6 +131,11 @@ def competition_import():
             created += 1
         else:
             matched += 1
+            # Если совпавший спортсмен невидим (не в списке и не на странице ожидания),
+            # переводим его в «На рассмотрении» — пользователь сам решит, включать ли.
+            if not athlete.in_list and not athlete.imported_pending:
+                athlete.imported_pending = True
+                athlete.is_imported = True
 
         exists = CompetitionParticipation.query.filter_by(
             athlete_id=athlete.id,
