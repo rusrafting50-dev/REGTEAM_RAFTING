@@ -345,8 +345,9 @@ def athletes_deactivate(athlete_id):
 
 @bp.route("/<int:athlete_id>/include-in-list", methods=["POST"])
 def athletes_include_in_list(athlete_id):
-    """Включить импортированного из COREZ спортсмена в список (без добавления в сборную)."""
-    athlete = _get_athlete_or_404(athlete_id)
+    """Включить импортированного из COREZ спортсмена в список (без добавления в сборную).
+    Не проверяем subject_id — импортированные приходят со своим субъектом из COREZ."""
+    athlete = Athlete.query.get_or_404(athlete_id)
     athlete.imported_pending = False
     athlete.in_list = True
     db.session.commit()
