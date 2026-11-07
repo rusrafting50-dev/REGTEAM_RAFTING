@@ -123,6 +123,7 @@ def competition_import():
                 rank             = _RANK_FROM_COREZ.get(rank_raw, rank_raw),
                 subject_id       = subject.id,
                 is_active        = False,
+                is_imported      = True,
                 imported_pending = True,
             )
             db.session.add(athlete)
