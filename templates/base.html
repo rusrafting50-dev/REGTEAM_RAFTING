@@ -74,6 +74,18 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('import_export.import_index') }}">Импорт</a>
                     </li>
+                    {% set _pc = pending_corez_count() %}
+                    {% if _pc %}
+                    <li class="nav-item">
+                        <a class="nav-link text-warning fw-bold" href="{{ url_for('athletes.athletes_pending') }}">
+                            Из COREZ <span class="badge bg-warning text-dark">{{ _pc }}</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('athletes.athletes_pending') }}">Из COREZ</a>
+                    </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('reports.reports_filter') }}">Exell</a>
                     </li>

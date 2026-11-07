@@ -111,6 +111,18 @@ def create_app():
             "regional_result_label": результат_субъекта_заголовок(текущий_субъект()),
         }
 
+    @app.context_processor
+    def inject_pending_count():
+        def pending_corez_count():
+            try:
+                return Athlete.query.filter_by(
+                    subject_id=текущий_субъект_id(),
+                    imported_pending=True,
+                ).count()
+            except Exception:
+                return 0
+        return {"pending_corez_count": pending_corez_count}
+
     @app.route("/")
     def index():
         return redirect(url_for("athletes.athletes_list"))
