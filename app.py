@@ -70,11 +70,11 @@ def _sync_missing_columns():
 
 
 def _backfill_in_list():
-    """Ставит in_list=True всем спортсменам, у которых in_list=False
-    но is_active=True (колонка добавлена позже — у старых записей False)."""
+    """Ставит in_list=True всем спортсменам, у которых is_active=True,
+    но in_list не True (NULL или False — ALTER TABLE не задаёт DEFAULT)."""
     db.session.query(Athlete).filter(
         Athlete.is_active == True,
-        Athlete.in_list == False,
+        Athlete.in_list.isnot(True),
     ).update({"in_list": True}, synchronize_session=False)
     db.session.commit()
 

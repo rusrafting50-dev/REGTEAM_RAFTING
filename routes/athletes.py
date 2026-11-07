@@ -180,7 +180,7 @@ def athletes_list():
         query = _scope_to_organization(query)
     else:
         # Все спортсмены «в списке»: в сборной (зелёные) и просто числящиеся.
-        query = query.filter_by(in_list=True)
+        query = query.filter(Athlete.in_list == True)
     heading = f"Спортсмены и специалисты: {organization.name}" if organization else "Список сборной команды"
     pending_count = Athlete.query.filter_by(
         subject_id=текущий_субъект_id(), imported_pending=True
