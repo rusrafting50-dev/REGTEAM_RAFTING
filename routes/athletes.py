@@ -182,9 +182,7 @@ def athletes_list():
         # Все спортсмены «в списке»: в сборной (зелёные) и просто числящиеся.
         query = query.filter(Athlete.in_list == True)
     heading = f"Спортсмены и специалисты: {organization.name}" if organization else "Список сборной команды"
-    pending_count = Athlete.query.filter_by(
-        subject_id=текущий_субъект_id(), imported_pending=True
-    ).count()
+    pending_count = Athlete.query.filter_by(imported_pending=True).count()
     return _render_athletes_list(
         query, list_buttons=LIST_BUTTONS,
         heading=heading,
@@ -195,8 +193,9 @@ def athletes_list():
 
 @bp.route("/pending")
 def athletes_pending():
-    """Импортированные из COREZ спортсмены (imported_pending=True) — на рассмотрении."""
-    query = Athlete.query.filter_by(subject_id=текущий_субъект_id(), imported_pending=True)
+    """Импортированные из COREZ спортсмены (imported_pending=True) — на рассмотрении.
+    Показываем по всем субъектам — спортсмены пришли со своими субъектами из COREZ."""
+    query = Athlete.query.filter_by(imported_pending=True)
     return _render_athletes_list(
         query,
         heading="На рассмотрении (импортированные из COREZ)",

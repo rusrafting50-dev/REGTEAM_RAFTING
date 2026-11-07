@@ -115,10 +115,7 @@ def create_app():
     def inject_pending_count():
         def pending_corez_count():
             try:
-                return Athlete.query.filter_by(
-                    subject_id=текущий_субъект_id(),
-                    imported_pending=True,
-                ).count()
+                return Athlete.query.filter_by(imported_pending=True).count()
             except Exception:
                 return 0
         return {"pending_corez_count": pending_corez_count}
