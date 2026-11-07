@@ -115,14 +115,15 @@ def competition_import():
             gender_raw = (a.get("gender") or "").strip()
             rank_raw   = (a.get("rank")   or "").strip()
             athlete = Athlete(
-                last_name   = last_name,
-                first_name  = first_name,
-                middle_name = (a.get("middle_name") or "").strip(),
-                birth_date  = birth_date,
-                gender      = _GENDER_FROM_COREZ.get(gender_raw, gender_raw),
-                rank        = _RANK_FROM_COREZ.get(rank_raw, rank_raw),
-                subject_id  = subject.id,
-                is_active   = False,
+                last_name        = last_name,
+                first_name       = first_name,
+                middle_name      = (a.get("middle_name") or "").strip(),
+                birth_date       = birth_date,
+                gender           = _GENDER_FROM_COREZ.get(gender_raw, gender_raw),
+                rank             = _RANK_FROM_COREZ.get(rank_raw, rank_raw),
+                subject_id       = subject.id,
+                is_active        = False,
+                imported_pending = True,
             )
             db.session.add(athlete)
             db.session.flush()

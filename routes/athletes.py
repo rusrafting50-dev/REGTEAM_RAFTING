@@ -183,7 +183,7 @@ def athletes_list():
         query = query.filter_by(is_active=True)
     heading = f"Спортсмены и специалисты: {organization.name}" if organization else "Список сборной команды"
     pending_count = Athlete.query.filter_by(
-        subject_id=текущий_субъект_id(), is_active=False
+        subject_id=текущий_субъект_id(), imported_pending=True
     ).count()
     return _render_athletes_list(
         query, list_buttons=LIST_BUTTONS,
@@ -195,8 +195,8 @@ def athletes_list():
 
 @bp.route("/pending")
 def athletes_pending():
-    """Импортированные из COREZ спортсмены (is_active=False) — на рассмотрении."""
-    query = Athlete.query.filter_by(subject_id=текущий_субъект_id(), is_active=False)
+    """Импортированные из COREZ спортсмены (imported_pending=True) — на рассмотрении."""
+    query = Athlete.query.filter_by(subject_id=текущий_субъект_id(), imported_pending=True)
     return _render_athletes_list(
         query,
         heading="На рассмотрении (импортированные из COREZ)",
@@ -349,6 +349,7 @@ def athletes_activate(athlete_id):
     athlete = _get_athlete_or_404(athlete_id)
     is_first_add = not athlete.change_logs
     athlete.is_active = True
+    athlete.imported_pending = False
     db.session.add(
         ChangeLog(athlete_id=athlete.id, change_type="включён", change_date=date.today())
     )
