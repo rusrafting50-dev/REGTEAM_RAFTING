@@ -113,6 +113,7 @@
             {% if show_activate_button %}
             <td class="text-center">
               <form method="post" action="{{ url_for('athletes.athletes_activate', athlete_id=athlete.id) }}">
+                <input type="hidden" name="next" value="{{ url_for('athletes.athletes_pending') }}">
                 <button class="btn btn-success btn-sm">Включить</button>
               </form>
             </td>

@@ -354,7 +354,8 @@ def athletes_activate(athlete_id):
     )
     db.session.commit()
     flash("Спортсмен добавлен в список" if is_first_add else "Спортсмен возвращён в список", "success")
-    return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
+    next_url = request.form.get("next") or url_for("athletes.athletes_detail", athlete_id=athlete.id)
+    return redirect(next_url)
 
 
 @bp.route("/<int:athlete_id>/send-to-site", methods=["POST"])
