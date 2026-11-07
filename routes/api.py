@@ -131,9 +131,16 @@ def competition_import():
             created += 1
         else:
             matched += 1
-            # Если совпавший спортсмен невидим (не в списке и не на странице ожидания),
-            # переводим его в «На рассмотрении» — пользователь сам решит, включать ли.
-            if not athlete.in_list and not athlete.imported_pending:
+            # Импортированный ранее спортсмен (is_imported=True): субъект мог быть
+            # записан неверно (COREZ-субъект вместо субъекта команды). Переводим
+            # обратно в «На рассмотрении» — при нажатии «Включить» subject_id
+            # выставится корректно, после чего is_imported сбросится в False и
+            # спортсмен больше не будет повторно попадать в pending.
+            if athlete.is_imported and not athlete.imported_pending:
+                athlete.imported_pending = True
+                athlete.in_list = False   # сбрасываем: будет переприсвоен при «Включить»
+            elif not athlete.in_list and not athlete.imported_pending:
+                # Не-импортированный спортсмен, ранее не числившийся в списке
                 athlete.imported_pending = True
                 athlete.is_imported = True
 

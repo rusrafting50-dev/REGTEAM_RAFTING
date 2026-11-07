@@ -351,6 +351,7 @@ def athletes_include_in_list(athlete_id):
     athlete.imported_pending = False
     athlete.in_list = True
     athlete.subject_id = текущий_субъект_id()
+    athlete.is_imported = False  # снимаем: теперь под правильным субъектом, не переприсваивать
     db.session.commit()
     flash(f"{athlete.full_name} добавлен в список.", "success")
     next_url = request.form.get("next") or url_for("athletes.athletes_list")
