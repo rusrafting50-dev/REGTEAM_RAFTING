@@ -179,19 +179,8 @@ def athletes_list():
         # за клубом, включение в сборную — отдельное действие.
         query = _scope_to_organization(query)
     else:
-        # Общая страница: официально в сборной (is_active) + импортированные
-        # из COREZ, которые включены в список но ещё не введены в сборную
-        # (is_imported=True, imported_pending=False, is_active=False).
-        query = query.filter(
-            db.or_(
-                Athlete.is_active == True,
-                db.and_(
-                    Athlete.is_imported == True,
-                    Athlete.imported_pending == False,
-                    Athlete.is_active == False,
-                ),
-            )
-        )
+        # Все спортсмены «в списке»: в сборной (зелёные) и просто числящиеся.
+        query = query.filter_by(in_list=True)
     heading = f"Спортсмены и специалисты: {organization.name}" if organization else "Список сборной команды"
     pending_count = Athlete.query.filter_by(
         subject_id=текущий_субъект_id(), imported_pending=True
@@ -360,6 +349,7 @@ def athletes_include_in_list(athlete_id):
     """Включить импортированного из COREZ спортсмена в список (без добавления в сборную)."""
     athlete = _get_athlete_or_404(athlete_id)
     athlete.imported_pending = False
+    athlete.in_list = True
     db.session.commit()
     flash(f"{athlete.full_name} добавлен в список.", "success")
     next_url = request.form.get("next") or url_for("athletes.athletes_list")
@@ -371,6 +361,7 @@ def athletes_activate(athlete_id):
     athlete = _get_athlete_or_404(athlete_id)
     is_first_add = not athlete.change_logs
     athlete.is_active = True
+    athlete.in_list = True
     athlete.imported_pending = False
     db.session.add(
         ChangeLog(athlete_id=athlete.id, change_type="включён", change_date=date.today())
