@@ -116,16 +116,28 @@
               <div class="text-warning small mb-1" title="Спортсмен состоит в сборной другого региона">
                 ⚠ {{ athlete.subject.name if athlete.subject else 'другой регион' }}
               </div>
-              <form method="post" action="{{ url_for('athletes.athletes_include_in_list', athlete_id=athlete.id) }}"
-                    onsubmit="return confirm('Спортсмен состоит в сборной «' + '{{ (athlete.subject.name if athlete.subject else 'другого региона')|e }}' + '». Сначала рекомендуется исключить его оттуда. Включить в текущий регион?')">
-                <input type="hidden" name="next" value="{{ url_for('athletes.athletes_pending') }}">
-                <button class="btn btn-warning btn-sm">Включить</button>
-              </form>
+              <div class="d-flex gap-1 justify-content-center">
+                <form method="post" action="{{ url_for('athletes.athletes_include_in_list', athlete_id=athlete.id) }}"
+                      onsubmit="return confirm('Спортсмен состоит в сборной «{{ (athlete.subject.name if athlete.subject else 'другого региона')|e }}». Сначала рекомендуется исключить его оттуда. Включить в текущий регион?')">
+                  <input type="hidden" name="next" value="{{ url_for('athletes.athletes_pending') }}">
+                  <button class="btn btn-warning btn-sm">Включить</button>
+                </form>
+                <form method="post" action="{{ url_for('athletes.athletes_delete_pending', athlete_id=athlete.id) }}"
+                      onsubmit="return confirm('Удалить {{ athlete.full_name|e }} из списка на рассмотрении?')">
+                  <button class="btn btn-outline-danger btn-sm">Удалить</button>
+                </form>
+              </div>
               {% else %}
-              <form method="post" action="{{ url_for('athletes.athletes_include_in_list', athlete_id=athlete.id) }}">
-                <input type="hidden" name="next" value="{{ url_for('athletes.athletes_pending') }}">
-                <button class="btn btn-success btn-sm">Включить</button>
-              </form>
+              <div class="d-flex gap-1 justify-content-center">
+                <form method="post" action="{{ url_for('athletes.athletes_include_in_list', athlete_id=athlete.id) }}">
+                  <input type="hidden" name="next" value="{{ url_for('athletes.athletes_pending') }}">
+                  <button class="btn btn-success btn-sm">Включить</button>
+                </form>
+                <form method="post" action="{{ url_for('athletes.athletes_delete_pending', athlete_id=athlete.id) }}"
+                      onsubmit="return confirm('Удалить {{ athlete.full_name|e }} из списка на рассмотрении?')">
+                  <button class="btn btn-outline-danger btn-sm">Удалить</button>
+                </form>
+              </div>
               {% endif %}
             </td>
             {% endif %}

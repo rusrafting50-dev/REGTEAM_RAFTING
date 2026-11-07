@@ -344,6 +344,20 @@ def athletes_deactivate(athlete_id):
     return redirect(url_for("athletes.athletes_detail", athlete_id=athlete.id))
 
 
+@bp.route("/<int:athlete_id>/delete-pending", methods=["POST"])
+def athletes_delete_pending(athlete_id):
+    """Удалить спортсмена, импортированного из COREZ (imported_pending=True).
+    Не проверяем subject_id — импортированные могут иметь чужой субъект."""
+    athlete = Athlete.query.get_or_404(athlete_id)
+    if not athlete.imported_pending:
+        abort(404)
+    name = athlete.full_name
+    db.session.delete(athlete)
+    db.session.commit()
+    flash(f"{name} удалён.", "warning")
+    return redirect(url_for("athletes.athletes_pending"))
+
+
 @bp.route("/<int:athlete_id>/include-in-list", methods=["POST"])
 def athletes_include_in_list(athlete_id):
     """Включить импортированного из COREZ спортсмена в список (без добавления в сборную).
