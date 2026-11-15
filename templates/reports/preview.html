@@ -6,7 +6,7 @@
     <a href="{{ url_for('reports.reports_filter') }}" class="btn btn-outline-secondary">Изменить фильтры</a>
 </div>
 
-<p>Субъект РФ: <strong>{{ filters.subject_name }}</strong>{% if filters.municipality %}, муниципальное образование: <strong>{{ filters.municipality }}</strong>{% endif %}<br>
+<p>Субъект РФ: <strong>{{ filters.subject_name }}</strong>{% if filters.municipality %}, организация или клуб: <strong>{{ filters.municipality }}</strong>{% endif %}<br>
 Найдено спортсменов: <strong>{{ athletes|length }}</strong></p>
 
 <form method="post" action="{{ url_for('reports.reports_export') }}" class="mb-3">

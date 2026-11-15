@@ -33,7 +33,7 @@ def apply_filters(query, args):
     if age_category:
         query = query.filter(Athlete.age_category == age_category)
     if municipality:
-        # муниципальное образование из Настроек — как в меню «Сборная команда»
+        # организация или клуб из Настроек — как в меню «Сборная команда»
         # (Athlete.organization); совпадение с территорией тоже засчитывается
         query = query.filter(db.or_(Athlete.organization == municipality, Athlete.territory == municipality))
     if gender:
@@ -146,7 +146,7 @@ def reports_filter():
         today=datetime.today().date().isoformat(),
         subjects=subjects,
         current_subject_id=текущий_субъект_id(),
-        # муниципальные образования каждого субъекта (Настройки) — для зависимого списка
+        # организации и клубы каждого субъекта (Настройки) — для зависимого списка
         municipalities={s.id: [o.name for o in организации_субъекта(s.id)] for s in subjects},
     )
 

@@ -27,7 +27,7 @@
             </select>
         </div>
         <div class="col-md-4">
-            <label class="form-label">Муниципальное образование</label>
+            <label class="form-label">Организация или клуб</label>
             <select name="municipality" class="form-select" id="fullListMunicipality">
                 <option value="">Все</option>
                 {% for m in municipalities.get(current_subject_id, []) %}
@@ -84,7 +84,7 @@
 </form>
 
 <script>
-// «Муниципальное образование» — только образования выбранного субъекта (Настройки)
+// «Организация или клуб» — только организации и клубы выбранного субъекта (Настройки)
 (function () {
     var bySubject = {{ municipalities|tojson }};
     var subject = document.getElementById('fullListSubject');
