@@ -257,7 +257,11 @@ class CompetitionParticipation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     athlete_id = db.Column(db.Integer, db.ForeignKey("athlete.id"), nullable=False)
 
-    date = db.Column(db.Date)
+    date = db.Column(db.Date)                       # прежнее поле «Дата» (перенесено в period_place)
+    period_place = db.Column(db.String(300))        # Сроки и место проведения
     competition_name = db.Column(db.String(300))
     result = db.Column(db.String(200))
     responsible_person = db.Column(db.String(200))
+    # id соревнования в COREZ — кнопка «Результаты в карточки спортсменов»
+    # обновляет эту запись при повторной отправке
+    corez_competition_id = db.Column(db.Integer)

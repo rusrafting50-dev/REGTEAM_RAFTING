@@ -259,7 +259,7 @@
     url_for('athletes.awards_add', athlete_id=athlete.id)) }}
 
 {{ crud_table('competition_participations', 'Данные об участии в соревнованиях', athlete.competition_participations,
-    [{'field': 'date', 'label': 'Дата', 'type': 'date'},
+    [{'field': 'period_place', 'label': 'Сроки и место проведения', 'type': 'text'},
      {'field': 'competition_name', 'label': 'Наименование соревнований', 'type': 'text'},
      {'field': 'result', 'label': 'Результат', 'type': 'text'},
      {'field': 'responsible_person', 'label': 'Ответственное лицо', 'type': 'text'}],

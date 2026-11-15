@@ -79,6 +79,8 @@ def competition_import():
 
     competition_name = (data.get("competition_name") or "").strip()
     competition_date_str = (data.get("competition_date") or "").strip()
+    period_place = (data.get("competition_period_place") or "").strip() or None
+    corez_id = _int_or_none(data.get("competition_id"))
     athletes_data = data.get("athletes") or []
 
     try:
@@ -158,6 +160,8 @@ def competition_import():
                 athlete_id=athlete.id,
                 competition_name=competition_name,
                 date=competition_date,
+                period_place=period_place,
+                corez_competition_id=corez_id,
             ))
             participations_created += 1
 
@@ -168,6 +172,84 @@ def competition_import():
         "participations_created": participations_created,
         "conflicts": conflicts,
     })
+
+
+def _int_or_none(value):
+    return int(value) if str(value or "").isdigit() else None
+
+
+def _norm(text):
+    return " ".join((text or "").replace("ё", "е").replace("Ё", "Е").lower().split())
+
+
+def _find_athlete(last_name, first_name, birth_date):
+    """Спортсмен по фамилии и имени (без учёта регистра и ё/е) и, если
+    известна, дате рождения."""
+    query = Athlete.query
+    if birth_date:
+        query = query.filter(Athlete.birth_date == birth_date)
+    for athlete in query.all():
+        if _norm(athlete.last_name) == _norm(last_name) and _norm(athlete.first_name) == _norm(first_name):
+            return athlete
+    return None
+
+
+@bp.route("/competition/results", methods=["POST"])
+@require_api_key
+def competition_results():
+    """Лучшие результаты спортсменов на соревновании COREZ (кнопка «Результаты
+    в карточки спортсменов» на странице «Отчёты» COREZ) — в раздел «Данные об
+    участии в соревнованиях» карточки спортсмена. Запись участия этого
+    соревнования (созданная, например, при импорте заявки) обновляется,
+    иначе добавляется. Спортсмены, которых нет в базе, не создаются.
+
+    Тело запроса (JSON):
+      competition_id, competition_name, competition_period_place («Сроки и место проведения»),
+      athletes — [{last_name, first_name, middle_name, birth_date (ISO), result}, …]
+
+    Ответ: {updated, created, not_found: [ФИО, …]}
+    """
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Ожидается JSON."}), 400
+
+    corez_id = _int_or_none(data.get("competition_id"))
+    competition_name = (data.get("competition_name") or "").strip()
+    period_place = (data.get("competition_period_place") or "").strip() or None
+    updated, created, not_found = 0, 0, []
+
+    for a in data.get("athletes") or []:
+        last_name = (a.get("last_name") or "").strip()
+        first_name = (a.get("first_name") or "").strip()
+        try:
+            birth_date = date.fromisoformat(a.get("birth_date")) if a.get("birth_date") else None
+        except ValueError:
+            birth_date = None
+        athlete = _find_athlete(last_name, first_name, birth_date)
+        if athlete is None:
+            not_found.append(" ".join(x for x in (last_name, first_name, a.get("middle_name") or "") if x))
+            continue
+
+        record = None
+        if corez_id is not None:
+            record = CompetitionParticipation.query.filter_by(
+                athlete_id=athlete.id, corez_competition_id=corez_id).first()
+        if record is None and competition_name:
+            record = CompetitionParticipation.query.filter_by(
+                athlete_id=athlete.id, competition_name=competition_name).first()
+        if record is None:
+            record = CompetitionParticipation(athlete_id=athlete.id, competition_name=competition_name)
+            db.session.add(record)
+            created += 1
+        else:
+            updated += 1
+        record.corez_competition_id = corez_id
+        record.competition_name = record.competition_name or competition_name
+        record.period_place = period_place or record.period_place
+        record.result = (a.get("result") or "").strip() or record.result
+
+    db.session.commit()
+    return jsonify({"updated": updated, "created": created, "not_found": not_found})
 
 
 @bp.route("/athletes/search", methods=["GET"])

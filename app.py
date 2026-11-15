@@ -9,7 +9,7 @@ from markupsafe import Markup, escape
 from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import Engine
 
-from models import Athlete, ListChangeRecord, Organization, ReportSettings, Subject, db
+from models import Athlete, CompetitionParticipation, ListChangeRecord, Organization, ReportSettings, Subject, db
 from organizations import организации_субъекта, текущая_организация
 from routes.api import bp as api_bp
 from routes.athletes import bp as athletes_bp
@@ -79,6 +79,16 @@ def _backfill_in_list():
     db.session.commit()
 
 
+def _backfill_participation_period():
+    """«Дата» участия в соревнованиях заменена текстом «Сроки и место
+    проведения» — прежние даты переносятся туда (только в пустые)."""
+    for record in CompetitionParticipation.query.filter(
+        CompetitionParticipation.period_place.is_(None), CompetitionParticipation.date.isnot(None),
+    ):
+        record.period_place = record.date.strftime("%d.%m.%Y")
+    db.session.commit()
+
+
 def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = "dev-secret-key"
@@ -100,6 +110,7 @@ def create_app():
         _sync_missing_columns()
         обеспечить_субъекты()
         _backfill_in_list()
+        _backfill_participation_period()
 
     @app.context_processor
     def inject_subjects():

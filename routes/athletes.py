@@ -535,7 +535,7 @@ _register_athlete_subtable_routes(
 )
 _register_athlete_subtable_routes(
     CompetitionParticipation, "competition_participations",
-    {"date": "date", "competition_name": "text", "result": "text", "responsible_person": "text"},
+    {"period_place": "text", "competition_name": "text", "result": "text", "responsible_person": "text"},
     "Данные об участии в соревнованиях",
 )
 
