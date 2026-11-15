@@ -152,6 +152,33 @@ def create_app():
         flash(f"Субъект «{name}» добавлен", "success")
         return _to_settings(subject.id)
 
+    @app.route("/subjects/<int:subject_id>/delete", methods=["POST"])
+    def subjects_delete(subject_id):
+        """Удаляет субъект вместе с его реквизитами, изменениями в список и
+        муниципальными образованиями — только если у него нет спортсменов
+        и он не последний."""
+        subject = Subject.query.get_or_404(subject_id)
+        athletes = Athlete.query.filter_by(subject_id=subject.id).count()
+        if athletes:
+            word = "спортсмен" if athletes % 10 == 1 and athletes % 100 != 11 else (
+                "спортсмена" if athletes % 10 in (2, 3, 4) and athletes % 100 not in (12, 13, 14) else "спортсменов")
+            flash(f"Нельзя удалить «{subject.name}»: в нём {athletes} {word}. "
+                  "Сначала удалите или перенесите их.", "warning")
+            return _to_settings(subject.id)
+        if Subject.query.count() <= 1:
+            flash("Нельзя удалить последний субъект", "warning")
+            return _to_settings(subject.id)
+        for model in (ReportSettings, ListChangeRecord, Organization):
+            model.query.filter_by(subject_id=subject.id).delete(synchronize_session=False)
+        if session.get("subject_id") == subject.id:
+            session.pop("subject_id", None)
+            session.pop("organization_id", None)
+        name = subject.name
+        db.session.delete(subject)
+        db.session.commit()
+        flash(f"Субъект «{name}» удалён", "success")
+        return redirect(url_for("settings"))
+
     @app.route("/subjects/<int:subject_id>/rename", methods=["POST"])
     def subjects_rename(subject_id):
         subject = Subject.query.get_or_404(subject_id)
@@ -176,23 +203,6 @@ def create_app():
     def organizations_clear():
         session.pop("organization_id", None)
         return redirect(request.referrer or url_for("athletes.athletes_list"))
-
-    @app.route("/organizations", methods=["POST"])
-    def organizations_add():
-        name = request.form.get("name", "").strip()
-        if not name:
-            flash("Укажите наименование организации", "error")
-            return redirect(request.referrer or url_for("athletes.athletes_list"))
-        subject_id = текущий_субъект_id()
-        if Organization.query.filter_by(subject_id=subject_id, name=name).first():
-            flash("Такая организация уже есть в списке", "warning")
-            return redirect(request.referrer or url_for("athletes.athletes_list"))
-        organization = Organization(subject_id=subject_id, name=name)
-        db.session.add(organization)
-        db.session.commit()
-        flash(f"Организация «{name}» добавлена", "success")
-        session["organization_id"] = organization.id
-        return redirect(url_for("athletes.athletes_list"))
 
     @app.route("/settings", methods=["GET", "POST"])
     def settings():

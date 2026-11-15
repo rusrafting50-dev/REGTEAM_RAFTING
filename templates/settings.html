@@ -25,13 +25,19 @@
         <div id="subject-body-{{ subject.id }}" class="accordion-collapse collapse {{ 'show' if is_open }}">
             <div class="accordion-body">
 
-                <form method="post" action="{{ url_for('subjects_rename', subject_id=subject.id) }}" class="d-flex gap-2 align-items-end mb-4" style="max-width: 600px;">
-                    <div class="flex-grow-1">
-                        <label class="form-label mb-0">Наименование субъекта Российской Федерации</label>
-                        <input type="text" name="name" class="form-control" value="{{ subject.name }}" required>
-                    </div>
-                    <button type="submit" class="btn btn-outline-primary">Переименовать</button>
-                </form>
+                <div class="d-flex gap-2 align-items-end mb-4">
+                    <form method="post" action="{{ url_for('subjects_rename', subject_id=subject.id) }}" class="d-flex gap-2 align-items-end" style="width: 600px; max-width: 100%;">
+                        <div class="flex-grow-1">
+                            <label class="form-label mb-0">Наименование субъекта Российской Федерации</label>
+                            <input type="text" name="name" class="form-control" value="{{ subject.name }}" required>
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary">Переименовать</button>
+                    </form>
+                    <form method="post" action="{{ url_for('subjects_delete', subject_id=subject.id) }}" class="ms-auto"
+                          onsubmit="return confirm('Удалить субъект «{{ subject.name|e }}» вместе с его реквизитами, изменениями в список и муниципальными образованиями?');">
+                        <button type="submit" class="btn btn-outline-danger">Удалить субъект</button>
+                    </form>
+                </div>
 
                 <h3 class="h6">Реквизиты для отчётов</h3>
                 <form method="post" action="{{ url_for('settings') }}" class="row g-3 mb-4" style="max-width: 900px;">

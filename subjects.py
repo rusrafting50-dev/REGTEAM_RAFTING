@@ -20,16 +20,22 @@ SEED_SUBJECT_NAMES = [
 ]
 
 
-def обеспечить_субъекты():
-    """Создаёт справочные субъекты РФ (если их ещё нет) и переносит
-    записи, созданные до этой фичи (subject_id ещё NULL — вся база тогда
-    обслуживала только Московскую область), на субъект по умолчанию."""
-    for name in SEED_SUBJECT_NAMES:
-        if not Subject.query.filter_by(name=name).first():
-            db.session.add(Subject(name=name))
-    db.session.commit()
+def субъект_по_умолчанию():
+    """Московская область, а если её удалили в Настройках — первый из оставшихся."""
+    return Subject.query.filter_by(name=DEFAULT_SUBJECT_NAME).first() or Subject.query.order_by(Subject.id).first()
 
-    default = Subject.query.filter_by(name=DEFAULT_SUBJECT_NAME).first()
+
+def обеспечить_субъекты():
+    """В пустой базе создаёт справочные субъекты РФ (дальше список ведётся
+    в Настройках — удалённые не пересоздаются) и переносит записи,
+    созданные до этой фичи (subject_id ещё NULL — вся база тогда
+    обслуживала только Московскую область), на субъект по умолчанию."""
+    if not Subject.query.first():
+        for name in SEED_SUBJECT_NAMES:
+            db.session.add(Subject(name=name))
+        db.session.commit()
+
+    default = субъект_по_умолчанию()
     db.session.query(Athlete).filter(Athlete.subject_id.is_(None)).update({"subject_id": default.id})
     db.session.query(ReportSettings).filter(ReportSettings.subject_id.is_(None)).update({"subject_id": default.id})
     db.session.query(ListChangeRecord).filter(ListChangeRecord.subject_id.is_(None)).update({"subject_id": default.id})
@@ -40,7 +46,7 @@ def текущий_субъект_id():
     subject_id = session.get("subject_id")
     if subject_id and Subject.query.get(subject_id):
         return subject_id
-    default = Subject.query.filter_by(name=DEFAULT_SUBJECT_NAME).first()
+    default = субъект_по_умолчанию()
     session["subject_id"] = default.id
     return default.id
 

@@ -27,8 +27,6 @@
                                    href="{{ url_for('subjects_switch', subject_id=subject.id) }}">{{ subject.name }}</a>
                             </li>
                             {% endfor %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item small text-muted" href="{{ url_for('settings') }}">Список субъектов — в Настройках</a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
@@ -49,17 +47,6 @@
                             {% else %}
                             <li><span class="dropdown-item-text text-muted">У субъекта «{{ current_subject.name if current_subject }}» нет муниципальных образований</span></li>
                             {% endfor %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <button type="button" class="dropdown-item" id="btnToggleAddOrganization">+ Добавить организацию</button>
-                            </li>
-                            <li id="formAddOrganizationWrap" class="px-3 py-1" style="display:none;">
-                                <form method="post" action="{{ url_for('organizations_add') }}" class="d-flex gap-1">
-                                    <input type="text" name="name" class="form-control form-control-sm"
-                                           placeholder="Наименование организации" required>
-                                    <button type="submit" class="btn btn-sm btn-primary">Добавить</button>
-                                </form>
-                            </li>
                         </ul>
                     </li>
                     <li class="nav-item">
