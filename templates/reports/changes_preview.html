@@ -7,11 +7,13 @@
 </div>
 
 <p>
+    Субъект РФ: <strong>{{ subject.name }}</strong><br>
     Дата документа: <strong>{{ doc_date }}</strong>{% if document_number %}, номер документа: <strong>{{ document_number }}</strong>{% endif %}<br>
     Исключено: <strong>{{ exclude_list|length }}</strong>, включено: <strong>{{ include_list|length }}</strong>
 </p>
 
 <form method="post" action="{{ url_for('reports.reports_changes_export') }}" class="mb-3">
+    <input type="hidden" name="subject_id" value="{{ subject.id }}">
     <input type="hidden" name="doc_date" value="{{ doc_date }}">
     <input type="hidden" name="document_number" value="{{ document_number }}">
     <button type="submit" class="btn btn-primary">Выгрузить Excel</button>

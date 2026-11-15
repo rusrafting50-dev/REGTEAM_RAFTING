@@ -6,26 +6,36 @@ from flask import Blueprint, render_template, request, send_file
 
 import references
 from excel_generator import generate_changes_report, generate_report
-from models import Athlete, ChangeLog, ReportSettings, db
-from subjects import результат_субъекта_заголовок, текущий_субъект, текущий_субъект_id
+from models import Athlete, ChangeLog, ReportSettings, Subject, db
+from organizations import организации_субъекта
+from subjects import результат_субъекта_заголовок, текущий_субъект_id
 
 bp = Blueprint("reports", __name__, url_prefix="/reports")
 
 
-def get_settings():
-    return ReportSettings.query.filter_by(subject_id=текущий_субъект_id()).first()
+def get_subject(args):
+    """Субъект РФ, выбранный в форме выгрузки (по умолчанию — текущий из шапки)."""
+    subject_id = args.get("subject_id", type=int)
+    subject = Subject.query.get(subject_id) if subject_id else None
+    return subject or Subject.query.get(текущий_субъект_id())
+
+
+def get_settings(subject):
+    return ReportSettings.query.filter_by(subject_id=subject.id).first()
 
 
 def apply_filters(query, args):
     age_category = args.get("age_category", "")
-    territory = args.get("territory", "")
+    municipality = args.get("municipality", "")
     gender = args.get("gender", "")
     only_national_team = args.get("only_national_team") == "on"
 
     if age_category:
         query = query.filter(Athlete.age_category == age_category)
-    if territory:
-        query = query.filter(Athlete.territory == territory)
+    if municipality:
+        # муниципальное образование из Настроек — как в меню «Сборная команда»
+        # (Athlete.organization); совпадение с территорией тоже засчитывается
+        query = query.filter(db.or_(Athlete.organization == municipality, Athlete.territory == municipality))
     if gender:
         query = query.filter(Athlete.gender == gender)
     if only_national_team:
@@ -41,12 +51,11 @@ def get_doc_date(args):
     return datetime.today().date()
 
 
-def _athlete_ids_active_as_of(doc_date):
+def _athlete_ids_active_as_of(doc_date, subject_id):
     """ID спортсменов, состоявших в сборной на указанную дату — по истории «Членство в сборной
     команде» (как и в выгрузке «Изменения в список»). Для спортсменов без единой записи истории
     (например, добавленных обычным импортом основного списка) используется их текущий статус
     is_active, чтобы такие данные не пропадали из отчёта."""
-    subject_id = текущий_субъект_id()
     logs = (
         ChangeLog.query
         .join(Athlete, ChangeLog.athlete_id == Athlete.id)
@@ -78,9 +87,9 @@ def _athlete_ids_active_as_of(doc_date):
     return included_ids
 
 
-def get_filtered_athletes(args):
+def get_filtered_athletes(args, subject):
     doc_date = get_doc_date(args)
-    athlete_ids = _athlete_ids_active_as_of(doc_date)
+    athlete_ids = _athlete_ids_active_as_of(doc_date, subject.id)
     if not athlete_ids:
         return []
     query = Athlete.query.filter(Athlete.id.in_(athlete_ids))
@@ -88,17 +97,19 @@ def get_filtered_athletes(args):
     return query.order_by(Athlete.last_name).all()
 
 
-def get_selected_filters(args):
+def get_selected_filters(args, subject):
     return {
+        "subject_id": subject.id,
+        "subject_name": subject.name,
         "age_category": args.get("age_category", ""),
-        "territory": args.get("territory", ""),
+        "municipality": args.get("municipality", ""),
         "gender": args.get("gender", ""),
         "only_national_team": args.get("only_national_team") == "on",
         "doc_date": args.get("doc_date", "") or datetime.today().date().isoformat(),
     }
 
 
-def get_changes_lists(args):
+def get_changes_lists(args, subject):
     doc_date_raw = args.get("doc_date", "")
     doc_date = datetime.strptime(doc_date_raw, "%Y-%m-%d").date() if doc_date_raw else datetime.today().date()
     doc_number = args.get("document_number", "").strip()
@@ -106,7 +117,7 @@ def get_changes_lists(args):
     query = (
         ChangeLog.query
         .join(Athlete, ChangeLog.athlete_id == Athlete.id)
-        .filter(Athlete.subject_id == текущий_субъект_id(), ChangeLog.change_date == doc_date)
+        .filter(Athlete.subject_id == subject.id, ChangeLog.change_date == doc_date)
     )
     if doc_number:
         query = query.filter(ChangeLog.document_number == doc_number)
@@ -128,27 +139,34 @@ def get_changes_lists(args):
 
 @bp.route("")
 def reports_filter():
+    subjects = Subject.query.order_by(Subject.id).all()
     return render_template(
         "reports/filter.html",
         references=references,
         today=datetime.today().date().isoformat(),
+        subjects=subjects,
+        current_subject_id=текущий_субъект_id(),
+        # муниципальные образования каждого субъекта (Настройки) — для зависимого списка
+        municipalities={s.id: [o.name for o in организации_субъекта(s.id)] for s in subjects},
     )
 
 
 @bp.route("/preview", methods=["POST"])
 def reports_preview():
-    athletes = get_filtered_athletes(request.form)
-    filters = get_selected_filters(request.form)
+    subject = get_subject(request.form)
+    athletes = get_filtered_athletes(request.form, subject)
+    filters = get_selected_filters(request.form, subject)
     return render_template("reports/preview.html", athletes=athletes, filters=filters)
 
 
 @bp.route("/export", methods=["POST"])
 def reports_export():
-    athletes = get_filtered_athletes(request.form)
-    settings = get_settings()
+    subject = get_subject(request.form)
+    athletes = get_filtered_athletes(request.form, subject)
+    settings = get_settings(subject)
     doc_date = get_doc_date(request.form)
 
-    wb = generate_report(athletes, settings, doc_date, regional_result_label=результат_субъекта_заголовок(текущий_субъект()))
+    wb = generate_report(athletes, settings, doc_date, regional_result_label=результат_субъекта_заголовок(subject))
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
@@ -166,22 +184,24 @@ def reports_export():
 
 @bp.route("/changes/preview", methods=["POST"])
 def reports_changes_preview():
-    exclude_list, include_list, doc_date, doc_number = get_changes_lists(request.form)
+    subject = get_subject(request.form)
+    exclude_list, include_list, doc_date, doc_number = get_changes_lists(request.form, subject)
     return render_template(
         "reports/changes_preview.html",
         exclude_list=exclude_list, include_list=include_list,
-        doc_date=doc_date.isoformat(), document_number=doc_number,
+        doc_date=doc_date.isoformat(), document_number=doc_number, subject=subject,
     )
 
 
 @bp.route("/changes/export", methods=["POST"])
 def reports_changes_export():
-    exclude_list, include_list, doc_date, doc_number = get_changes_lists(request.form)
-    settings = get_settings()
+    subject = get_subject(request.form)
+    exclude_list, include_list, doc_date, doc_number = get_changes_lists(request.form, subject)
+    settings = get_settings(subject)
 
     wb = generate_changes_report(
         exclude_list, include_list, settings, doc_date, doc_number,
-        regional_result_label=результат_субъекта_заголовок(текущий_субъект()),
+        regional_result_label=результат_субъекта_заголовок(subject),
     )
     buffer = BytesIO()
     wb.save(buffer)
