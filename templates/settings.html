@@ -2,7 +2,7 @@
 {% block title %}Настройки — Сборная команда{% endblock %}
 {% block content %}
 <h1 class="h3 mb-2">Настройки</h1>
-<p class="text-muted">Субъекты Российской Федерации — те же, что в меню выбора субъекта в шапке. У каждого субъекта свои реквизиты для отчётов, изменения в список и муниципальные образования (пункты меню «Сборная команда»).</p>
+<p class="text-muted">Субъекты Российской Федерации — те же, что в меню выбора субъекта в шапке. У каждого субъекта свои реквизиты для отчётов, изменения в список и организации или клубы (пункты меню «Сборная команда»).</p>
 
 <div class="accordion mb-4" id="subjectsAccordion">
     {% for section in sections %}
@@ -18,7 +18,7 @@
                 <span class="badge bg-primary ms-2">выбран в шапке</span>
                 {% endif %}
                 <span class="text-muted small ms-3">
-                    изменений в список: {{ section.list_changes|length }} · муниципальных образований: {{ section.organizations|length }}
+                    изменений в список: {{ section.list_changes|length }} · организаций и клубов: {{ section.organizations|length }}
                 </span>
             </button>
         </h2>
@@ -34,7 +34,7 @@
                         <button type="submit" class="btn btn-outline-primary">Переименовать</button>
                     </form>
                     <form method="post" action="{{ url_for('subjects_delete', subject_id=subject.id) }}" class="ms-auto"
-                          onsubmit="return confirm('Удалить субъект «{{ subject.name|e }}» вместе с его реквизитами, изменениями в список и муниципальными образованиями?');">
+                          onsubmit="return confirm('Удалить субъект «{{ subject.name|e }}» вместе с его реквизитами, изменениями в список, организациями и клубами?');">
                         <button type="submit" class="btn btn-outline-danger">Удалить субъект</button>
                     </form>
                 </div>
@@ -128,12 +128,12 @@
                     </tbody>
                 </table>
 
-                <h3 class="h6">Муниципальные образования <span class="text-muted fw-normal small">— пункты меню «Сборная команда» в шапке</span></h3>
+                <h3 class="h6">Организация или клуб</h3>
                 <form method="post" action="{{ url_for('settings_organizations_add') }}" class="d-flex gap-2 align-items-end mb-3" style="max-width: 600px;">
                     <input type="hidden" name="subject_id" value="{{ subject.id }}">
                     <div class="flex-grow-1">
                         <label class="form-label mb-0">Наименование</label>
-                        <input type="text" name="name" class="form-control" placeholder="Пушкинский городской округ" required>
+                        <input type="text" name="name" class="form-control" placeholder='КТ "Абрис"' required>
                     </div>
                     <button type="submit" class="btn btn-outline-primary">Добавить</button>
                 </form>
@@ -159,7 +159,7 @@
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td class="text-center text-muted" style="min-width: 320px;">Муниципальные образования ещё не добавлены</td></tr>
+                        <tr><td class="text-center text-muted" style="min-width: 320px;">Организации и клубы ещё не добавлены</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

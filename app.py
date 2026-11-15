@@ -297,7 +297,7 @@ def create_app():
         if not name:
             flash("Укажите наименование", "error")
         elif Organization.query.filter_by(subject_id=subject.id, name=name).first():
-            flash("Такое муниципальное образование уже есть у этого субъекта", "warning")
+            flash("Такая организация или клуб уже есть у этого субъекта", "warning")
         else:
             db.session.add(Organization(subject_id=subject.id, name=name))
             db.session.commit()
@@ -312,7 +312,7 @@ def create_app():
             flash("Укажите наименование", "error")
         elif Organization.query.filter(Organization.subject_id == organization.subject_id,
                                        Organization.name == name, Organization.id != organization.id).first():
-            flash("Такое муниципальное образование уже есть у этого субъекта", "warning")
+            flash("Такая организация или клуб уже есть у этого субъекта", "warning")
         else:
             # Athlete.organization — свободный текст, совпадающий с названием: переименовываем и у спортсменов
             Athlete.query.filter_by(subject_id=organization.subject_id, organization=organization.name).update(
