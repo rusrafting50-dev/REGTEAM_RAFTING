@@ -131,22 +131,40 @@ def create_app():
         session.pop("organization_id", None)  # организация прошлого субъекта здесь больше не действует
         return redirect(url_for("athletes.athletes_list"))
 
+    def _to_settings(subject_id):
+        """Назад на «Настройки» с раскрытым разделом этого субъекта."""
+        return redirect(url_for("settings", open=subject_id) + f"#subject-{subject_id}")
+
+    # Субъекты РФ добавляются и переименовываются только на странице
+    # «Настройки»; в шапке — только переключение между ними.
     @app.route("/subjects", methods=["POST"])
     def subjects_add():
         name = request.form.get("name", "").strip()
         if not name:
             flash("Укажите наименование субъекта Российской Федерации", "error")
-            return redirect(request.referrer or url_for("athletes.athletes_list"))
+            return redirect(url_for("settings"))
         if Subject.query.filter_by(name=name).first():
             flash("Такой субъект уже есть в списке", "warning")
-            return redirect(request.referrer or url_for("athletes.athletes_list"))
+            return redirect(url_for("settings"))
         subject = Subject(name=name)
         db.session.add(subject)
         db.session.commit()
         flash(f"Субъект «{name}» добавлен", "success")
-        session["subject_id"] = subject.id
-        session.pop("organization_id", None)
-        return redirect(url_for("athletes.athletes_list"))
+        return _to_settings(subject.id)
+
+    @app.route("/subjects/<int:subject_id>/rename", methods=["POST"])
+    def subjects_rename(subject_id):
+        subject = Subject.query.get_or_404(subject_id)
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Укажите наименование субъекта Российской Федерации", "error")
+        elif Subject.query.filter(Subject.name == name, Subject.id != subject.id).first():
+            flash("Субъект с таким наименованием уже есть в списке", "warning")
+        else:
+            subject.name = name
+            db.session.commit()
+            flash(f"Субъект переименован в «{name}»", "success")
+        return _to_settings(subject.id)
 
     @app.route("/organizations/<int:organization_id>/switch")
     def organizations_switch(organization_id):
@@ -178,11 +196,13 @@ def create_app():
 
     @app.route("/settings", methods=["GET", "POST"])
     def settings():
-        report_settings = ReportSettings.query.filter_by(subject_id=текущий_субъект_id()).first()
-
+        """Все субъекты РФ — по разделу на каждый: наименование, реквизиты для
+        отчётов, «Изменения в список», муниципальные образования (сборные)."""
         if request.method == "POST":
+            subject = Subject.query.get_or_404(request.form.get("subject_id", type=int))
+            report_settings = ReportSettings.query.filter_by(subject_id=subject.id).first()
             if not report_settings:
-                report_settings = ReportSettings(subject_id=текущий_субъект_id())
+                report_settings = ReportSettings(subject_id=subject.id)
                 db.session.add(report_settings)
             report_settings.organization_name = request.form.get("organization_name", "").strip()
             report_settings.chairman_position = request.form.get("chairman_position", "").strip()
@@ -196,64 +216,112 @@ def create_app():
                 datetime.strptime(approval_date_raw, "%Y-%m-%d").date() if approval_date_raw else None
             )
             db.session.commit()
-            flash("Настройки сохранены", "success")
-            return redirect(url_for("settings"))
+            flash(f"Настройки субъекта «{subject.name}» сохранены", "success")
+            return _to_settings(subject.id)
 
-        list_changes = ListChangeRecord.query.filter_by(subject_id=текущий_субъект_id()).order_by(
-            ListChangeRecord.date.desc(), ListChangeRecord.id.desc()
-        ).all()
+        subjects = Subject.query.order_by(Subject.id).all()
+        sections = []
+        for subject in subjects:
+            sections.append({
+                "subject": subject,
+                "settings": ReportSettings.query.filter_by(subject_id=subject.id).first(),
+                "list_changes": ListChangeRecord.query.filter_by(subject_id=subject.id).order_by(
+                    ListChangeRecord.date.desc(), ListChangeRecord.id.desc()
+                ).all(),
+                "organizations": организации_субъекта(subject.id),
+            })
+        open_id = request.args.get("open", type=int) or текущий_субъект_id()
         return render_template(
-            "settings.html", settings=report_settings, list_changes=list_changes,
-            today=date.today().isoformat(),
+            "settings.html", sections=sections, open_id=open_id, today=date.today().isoformat(),
         )
 
-    @app.route("/settings/list-changes", methods=["POST"])
-    def settings_list_changes_add():
+    def _parse_change_form():
         number = request.form.get("number", "").strip()
         date_raw = request.form.get("date", "").strip()
         if not number or not date_raw:
             flash("Укажите номер и дату изменения", "error")
-            return redirect(url_for("settings"))
+            return None, None
         try:
-            change_date = datetime.strptime(date_raw, "%Y-%m-%d").date()
+            return number, datetime.strptime(date_raw, "%Y-%m-%d").date()
         except ValueError:
             flash("Некорректная дата", "error")
-            return redirect(url_for("settings"))
-        db.session.add(ListChangeRecord(subject_id=текущий_субъект_id(), number=number, date=change_date))
-        db.session.commit()
-        flash("Изменение в список добавлено", "success")
-        return redirect(url_for("settings"))
+            return None, None
+
+    @app.route("/settings/list-changes", methods=["POST"])
+    def settings_list_changes_add():
+        subject = Subject.query.get_or_404(request.form.get("subject_id", type=int))
+        number, change_date = _parse_change_form()
+        if number:
+            db.session.add(ListChangeRecord(subject_id=subject.id, number=number, date=change_date))
+            db.session.commit()
+            flash(f"Изменение в список добавлено ({subject.name})", "success")
+        return _to_settings(subject.id)
 
     @app.route("/settings/list-changes/<int:record_id>/edit", methods=["POST"])
     def settings_list_changes_edit(record_id):
         record = ListChangeRecord.query.get_or_404(record_id)
-        if record.subject_id != текущий_субъект_id():
-            abort(404)
-        number = request.form.get("number", "").strip()
-        date_raw = request.form.get("date", "").strip()
-        if not number or not date_raw:
-            flash("Укажите номер и дату изменения", "error")
-            return redirect(url_for("settings"))
-        try:
-            change_date = datetime.strptime(date_raw, "%Y-%m-%d").date()
-        except ValueError:
-            flash("Некорректная дата", "error")
-            return redirect(url_for("settings"))
-        record.number = number
-        record.date = change_date
-        db.session.commit()
-        flash("Изменение в список обновлено", "success")
-        return redirect(url_for("settings"))
+        number, change_date = _parse_change_form()
+        if number:
+            record.number = number
+            record.date = change_date
+            db.session.commit()
+            flash("Изменение в список обновлено", "success")
+        return _to_settings(record.subject_id)
 
     @app.route("/settings/list-changes/<int:record_id>/delete", methods=["POST"])
     def settings_list_changes_delete(record_id):
         record = ListChangeRecord.query.get_or_404(record_id)
-        if record.subject_id != текущий_субъект_id():
-            abort(404)
+        subject_id = record.subject_id
         db.session.delete(record)
         db.session.commit()
         flash("Изменение в список удалено", "success")
-        return redirect(url_for("settings"))
+        return _to_settings(subject_id)
+
+    # Муниципальные образования (организации) — пункты меню «Сборная команда»
+    # в шапке; у каждого свой субъект РФ, меню показывает только образования
+    # текущего субъекта.
+    @app.route("/settings/organizations", methods=["POST"])
+    def settings_organizations_add():
+        subject = Subject.query.get_or_404(request.form.get("subject_id", type=int))
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Укажите наименование", "error")
+        elif Organization.query.filter_by(subject_id=subject.id, name=name).first():
+            flash("Такое муниципальное образование уже есть у этого субъекта", "warning")
+        else:
+            db.session.add(Organization(subject_id=subject.id, name=name))
+            db.session.commit()
+            flash(f"«{name}» добавлено ({subject.name})", "success")
+        return _to_settings(subject.id)
+
+    @app.route("/settings/organizations/<int:organization_id>/edit", methods=["POST"])
+    def settings_organizations_edit(organization_id):
+        organization = Organization.query.get_or_404(organization_id)
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Укажите наименование", "error")
+        elif Organization.query.filter(Organization.subject_id == organization.subject_id,
+                                       Organization.name == name, Organization.id != organization.id).first():
+            flash("Такое муниципальное образование уже есть у этого субъекта", "warning")
+        else:
+            # Athlete.organization — свободный текст, совпадающий с названием: переименовываем и у спортсменов
+            Athlete.query.filter_by(subject_id=organization.subject_id, organization=organization.name).update(
+                {"organization": name}, synchronize_session=False)
+            organization.name = name
+            db.session.commit()
+            flash(f"Переименовано в «{name}»", "success")
+        return _to_settings(organization.subject_id)
+
+    @app.route("/settings/organizations/<int:organization_id>/delete", methods=["POST"])
+    def settings_organizations_delete(organization_id):
+        organization = Organization.query.get_or_404(organization_id)
+        subject_id = organization.subject_id
+        if session.get("organization_id") == organization.id:
+            session.pop("organization_id", None)
+        db.session.delete(organization)
+        db.session.commit()
+        flash(f"«{organization.name}» удалено из списка", "success")
+        return _to_settings(subject_id)
 
     return app
 

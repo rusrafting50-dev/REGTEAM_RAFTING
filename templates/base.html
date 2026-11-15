@@ -28,16 +28,7 @@
                             </li>
                             {% endfor %}
                             <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <button type="button" class="dropdown-item" id="btnToggleAddSubject">+ Добавить субъект Российской Федерации</button>
-                            </li>
-                            <li id="formAddSubjectWrap" class="px-3 py-1" style="display:none;">
-                                <form method="post" action="{{ url_for('subjects_add') }}" class="d-flex gap-1">
-                                    <input type="text" name="name" class="form-control form-control-sm"
-                                           placeholder="Наименование субъекта РФ" required>
-                                    <button type="submit" class="btn btn-sm btn-primary">Добавить</button>
-                                </form>
-                            </li>
+                            <li><a class="dropdown-item small text-muted" href="{{ url_for('settings') }}">Список субъектов — в Настройках</a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
@@ -56,7 +47,7 @@
                                    href="{{ url_for('organizations_switch', organization_id=organization.id) }}">{{ organization.name }}</a>
                             </li>
                             {% else %}
-                            <li><span class="dropdown-item-text text-muted">Организации ещё не добавлены</span></li>
+                            <li><span class="dropdown-item-text text-muted">У субъекта «{{ current_subject.name if current_subject }}» нет муниципальных образований</span></li>
                             {% endfor %}
                             <li><hr class="dropdown-divider"></li>
                             <li>
