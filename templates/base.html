@@ -50,7 +50,7 @@
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('import_export.import_index') }}">Импорт в Exell</a>
+                        <a class="nav-link" href="{{ url_for('import_export.import_index') }}">Импорт из Excel</a>
                     </li>
                     {% set _pc = pending_corez_count() %}
                     {% if _pc %}
@@ -65,7 +65,7 @@
                     </li>
                     {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('reports.reports_filter') }}">Экспорт в Exell</a>
+                        <a class="nav-link" href="{{ url_for('reports.reports_filter') }}">Экспорт в Excel</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('settings') }}">Настройки</a>
